@@ -1,0 +1,40 @@
+version: 2
+
+models:
+  - name: stg_sensor_readings
+    description: "Raw sensor readings typed and prepared for marts"
+    columns:
+      - name: id
+        description: "Primary key from raw table"
+        tests: [not_null, unique]
+      - name: sensor_id
+        description: "Unique identifier for each sensor"
+        tests: 
+          - not_null
+          - accepted_values:
+              values: ['SENSOR-001', 'SENSOR-002', 'SENSOR-003', 'SENSOR-004', 'SENSOR-005', 
+                      'SENSOR-006', 'SENSOR-007', 'SENSOR-008', 'SENSOR-009', 'SENSOR-010']
+      - name: event_time
+        description: "Timestamp when the reading was taken"
+        tests: [not_null]
+      - name: temperature_c
+        description: "Temperature in Celsius"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: -50
+              max_value: 100
+      - name: humidity_pct
+        description: "Humidity percentage"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 100
+      - name: soil_moisture
+        description: "Soil moisture level (0-1 scale)"
+        tests:
+          - not_null
+          - dbt_utils.accepted_range:
+              min_value: 0
+              max_value: 1

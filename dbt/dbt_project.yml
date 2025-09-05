@@ -1,0 +1,13 @@
+name: 'iot_pipeline'
+version: '1.0.0'
+config-version: 2
+
+profile: 'iot_local'
+
+models:
+  iot_pipeline:
+    +materialized: view
+    staging:
+      +schema: staging
+    marts:
+      +schema: marts

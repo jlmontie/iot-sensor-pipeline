@@ -1,0 +1,5 @@
+flowchart LR
+A[Sensor Simulator] -->|Kafka Producer| B((Kafka Topic: sensor.readings))
+B -->|Airflow Kafka Consumer| C[(Postgres raw_sensor_readings)]
+C -->|dbt models| D[(staging + marts)]
+D -->|SQL Queries| E[Streamlit Dashboard]

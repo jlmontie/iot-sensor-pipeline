@@ -1,0 +1,25 @@
+iot_local:
+  target: dev
+  outputs:
+    dev:
+      type: postgres
+      host: postgres  # Use Docker service name when running in Airflow
+      user: postgres
+      password: postgres
+      port: 5432
+      dbname: iot
+      schema: public
+      threads: 4
+      keepalives_idle: 0
+    
+    # BigQuery configuration (uncomment to use)
+    # bigquery:
+    #   type: bigquery
+    #   method: service-account
+    #   project: "{{ env_var('GCP_PROJECT_ID') }}"
+    #   dataset: "{{ env_var('BQ_DATASET') }}"
+    #   threads: 4
+    #   keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+    #   location: US
+    #   priority: interactive
+    #   retries: 1
