@@ -7,7 +7,7 @@ from airflow.operators.bash import BashOperator
 # from google.cloud import bigquery
 import json, os, time
 import psycopg2
-from kafka import KafkaConsumer
+from confluent_kafka import Consumer, KafkaError
 
 POSTGRES_CONN = "dbname=iot user=postgres password=postgres host=postgres port=5432"
 TOPIC = os.environ.get("KAFKA_TOPIC", "sensor.readings")
@@ -17,27 +17,72 @@ def consume_and_load(**context):
     """Load data from Kafka to Postgres (or BigQuery if configured)"""
     conn = psycopg2.connect(POSTGRES_CONN)
     cur = conn.cursor()
-    consumer = KafkaConsumer(
-        TOPIC,
-        bootstrap_servers=[BROKER],
-        value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-        auto_offset_reset="earliest",
-        enable_auto_commit=False,
-        consumer_timeout_ms=10000,  # stop after idle
-    )
+    
+    consumer_config = {
+        'bootstrap.servers': BROKER,
+        'group.id': 'airflow-iot-consumer',
+        'auto.offset.reset': 'earliest',
+        'enable.auto.commit': False,
+        'session.timeout.ms': 30000,
+        'heartbeat.interval.ms': 10000
+    }
+    consumer = Consumer(consumer_config)
+    consumer.subscribe([TOPIC])
+    
     count = 0
-    for msg in consumer:
-        rec = msg.value
-        cur.execute(
-            \"""INSERT INTO raw_sensor_readings(event_time, sensor_id, temperature_c, humidity_pct, soil_moisture, payload)
-                  VALUES (to_timestamp(%s), %s, %s, %s, %s, %s)\"""",
-            (rec["timestamp"], rec["sensor_id"], rec.get("temperature_c"), rec.get("humidity_pct"),
-             rec.get("soil_moisture"), json.dumps(rec)),
-        )
-        count += 1
-    conn.commit()
-    cur.close(); conn.close()
-    print(f"Ingested {count} records")
+    timeout_count = 0
+    max_timeouts = 30  # Stop after 30 consecutive timeouts (30 seconds)
+    
+    print(f"Starting Kafka consumer for topic: {TOPIC}")
+    print(f"Broker: {BROKER}")
+    
+    try:
+        while timeout_count < max_timeouts:
+            msg = consumer.poll(1.0)  # Poll for 1 second
+            
+            if msg is None:
+                timeout_count += 1
+                if timeout_count % 10 == 0:
+                    print(f"No messages received, timeout count: {timeout_count}/{max_timeouts}")
+                continue
+                
+            if msg.error():
+                if msg.error().code() == KafkaError._PARTITION_EOF:
+                    print("Reached end of partition")
+                    continue
+                else:
+                    print(f"Kafka error: {msg.error()}")
+                    break
+            
+            # Reset timeout counter on successful message
+            timeout_count = 0
+            
+            # Parse and insert message
+            try:
+                rec = json.loads(msg.value().decode('utf-8'))
+                cur.execute(
+                    """INSERT INTO raw_sensor_readings(event_time, sensor_id, temperature_c, humidity_pct, soil_moisture, payload)
+                          VALUES (to_timestamp(%s), %s, %s, %s, %s, %s)""",
+                    (rec["timestamp"], rec["sensor_id"], rec.get("temperature_c"), rec.get("humidity_pct"),
+                     rec.get("soil_moisture"), json.dumps(rec)),
+                )
+                count += 1
+                
+                # Commit every 10 records
+                if count % 10 == 0:
+                    conn.commit()
+                    print(f"Processed {count} records so far...")
+                    
+            except Exception as e:
+                print(f"Error processing message: {e}")
+                continue
+                
+    finally:
+        consumer.close()
+        conn.commit()
+        cur.close()
+        conn.close()
+        print(f"✅ Kafka consumer finished. Ingested {count} records total")
 
 # Alternative BigQuery ingestion function (commented out)
 # def consume_and_load_bigquery(**context):
@@ -47,14 +92,14 @@ def consume_and_load(**context):
 #     client = bigquery.Client()
 #     table_id = f"{os.environ['GCP_PROJECT_ID']}.{os.environ['BQ_DATASET']}.raw_sensor_readings"
 #     
-#     consumer = KafkaConsumer(
-#         TOPIC,
-#         bootstrap_servers=[BROKER],
-#         value_deserializer=lambda m: json.loads(m.decode("utf-8")),
-#         auto_offset_reset="earliest",
-#         enable_auto_commit=False,
-#         consumer_timeout_ms=10000,
-#     )
+#     consumer_config = {
+#         'bootstrap.servers': BROKER,
+#         'group.id': 'airflow-bigquery-consumer',
+#         'auto.offset.reset': 'earliest',
+#         'enable.auto.commit': False
+#     }
+#     consumer = Consumer(consumer_config)
+#     consumer.subscribe([TOPIC])
 #     
 #     rows = []
 #     for msg in consumer:
@@ -74,11 +119,11 @@ def consume_and_load(**context):
 #             raise Exception(f"BigQuery insert errors: {errors}")
 #         print(f"Ingested {len(rows)} records to BigQuery")
 
-default_args = {{
+default_args = {
     "owner": "airflow",
     "retries": 1,
     "retry_delay": timedelta(minutes=2),
-}}
+}
 
 with DAG(
     dag_id="iot_pipeline",
@@ -93,17 +138,17 @@ with DAG(
     # dbt transformation tasks
     dbt_deps = BashOperator(
         task_id="dbt_deps",
-        bash_command="cd /opt/airflow/dags/../../dbt && dbt deps --profiles-dir .",
+        bash_command="cd /opt/airflow/dbt && dbt deps --profiles-dir .",
     )
     
     dbt_run = BashOperator(
         task_id="dbt_run", 
-        bash_command="cd /opt/airflow/dags/../../dbt && dbt run --profiles-dir .",
+        bash_command="cd /opt/airflow/dbt && dbt run --profiles-dir .",
     )
     
     dbt_test = BashOperator(
         task_id="dbt_test",
-        bash_command="cd /opt/airflow/dags/../../dbt && dbt test --profiles-dir .",
+        bash_command="cd /opt/airflow/dbt && dbt test --profiles-dir .",
     )
 
     ingest >> dbt_deps >> dbt_run >> dbt_test

@@ -1,0 +1,18 @@
+iot_cloud:
+  target: prod
+  outputs:
+    prod:
+      type: bigquery
+      method: service-account
+      project: "{{ env_var('GOOGLE_CLOUD_PROJECT') }}"
+      dataset: iot_pipeline
+      threads: 4
+      keyfile: "{{ env_var('GOOGLE_APPLICATION_CREDENTIALS') }}"
+      location: US
+      priority: interactive
+      retries: 1
+
+
+
+
+

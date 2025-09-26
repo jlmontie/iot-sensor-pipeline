@@ -1,0 +1,31 @@
+# Cloud Monitoring alerting policy for cost control
+apiVersion: monitoring.coreos.com/v1
+kind: PrometheusRule
+metadata:
+  name: iot-pipeline-cost-alerts
+spec:
+  groups:
+  - name: cost.rules
+    rules:
+    - alert: HighBigQueryCosts
+      expr: increase(billing_cost_total{service="BigQuery"}[1h]) > 1
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "BigQuery costs are high"
+        description: "BigQuery costs have increased by more than $1 in the last hour"
+        
+    - alert: HighCloudRunCosts
+      expr: increase(billing_cost_total{service="Cloud Run"}[1h]) > 0.5
+      for: 5m
+      labels:
+        severity: warning
+      annotations:
+        summary: "Cloud Run costs are high"
+        description: "Cloud Run costs have increased by more than $0.50 in the last hour"
+
+
+
+
+

@@ -1,114 +1,214 @@
-# IoT Sensor Data Pipeline (Portfolio Project)
+# IoT Sensor Data Pipeline
 
-End-to-end data engineering project that simulates streaming IoT sensor data and runs it through a modern stack:
+![Architecture](https://img.shields.io/badge/Architecture-Cloud%20Native-blue)
+![Infrastructure](https://img.shields.io/badge/Infrastructure-Terraform-purple)
+![Streaming](https://img.shields.io/badge/Streaming-Kafka%20%7C%20Pub%2FSub-orange)
+![Cloud](https://img.shields.io/badge/Cloud-Google%20Cloud-red)
+![License](https://img.shields.io/badge/License-MIT-green)
 
-- **Ingestion/Streaming:** Kafka (via docker-compose)
-- **Orchestration:** Apache Airflow
-- **Warehouse:** Postgres (local dev) — swap to **BigQuery** with provided hooks
-- **Transformations:** dbt (staging → marts)
-- **Analytics App:** Streamlit dashboard
-- **Infra:** Docker Compose, .env configuration
+Production-ready data engineering project demonstrating modern cloud-native architecture and streaming data processing.
 
-## 🎯 Business Value & Impact
+## Business Impact
 
-**Problem Solved**: Traditional agricultural monitoring relies on manual inspections, leading to:
-- Late detection of crop stress (soil moisture drops)
-- Inefficient irrigation scheduling 
-- Reactive rather than proactive farm management
-- Higher operational costs and crop losses
+**Problem**: Traditional agricultural monitoring relies on manual inspections, leading to late detection of crop stress, inefficient irrigation scheduling, and reactive farm management with higher operational costs.
 
-**Solution Delivered**: Real-time IoT sensor monitoring with automated anomaly detection that enables:
-- **Proactive Maintenance**: Early warning system for irrigation issues
-- **Reduced Truck Rolls**: Remote monitoring eliminates unnecessary field visits  
-- **Optimized Resource Usage**: Data-driven irrigation and climate control
-- **Predictive Analytics**: Historical trends inform future planting decisions
+**Solution**: Real-time IoT sensor monitoring with automated anomaly detection that enables:
+- Proactive maintenance through early warning systems
+- Reduced operational costs via remote monitoring
+- Optimized resource usage through data-driven decisions
+- Predictive analytics for future planning
 
-**Technical Excellence**: This project demonstrates production-ready data engineering skills:
-- **Streaming Data Processing**: Kafka for real-time sensor ingestion
-- **Workflow Orchestration**: Airflow for reliable, scheduled pipeline execution
-- **Data Quality Assurance**: Comprehensive dbt testing and validation
-- **Dimensional Modeling**: Clean staging → marts architecture
-- **Interactive Analytics**: Real-time dashboard with anomaly highlighting
+## Architecture Overview
 
-## Quickstart
+```mermaid
+flowchart TD
+    A[Data Generator] -->|Pub/Sub Messages| B[(Pub/Sub Topic)]
+    B -->|Trigger| C[Cloud Function]
+    C --> D[(BigQuery Dataset)]
+    D --> E[Streamlit Dashboard]
+    
+    F[Service Account] -.->|Authentication| C
+    F -.->|Authentication| E
+    
+    style A fill:#e3f2fd
+    style B fill:#fff3e0
+    style C fill:#f3e5f5
+    style D fill:#e8f5e8
+    style E fill:#fff8e1
+```
 
-1) **Clone** this repo and copy `.env.example` to `.env`, then adjust values if desired.
-   ```bash
-   cp .env.example .env
-   ```
-2) **Start services**:
+## Technical Stack
+
+| Layer | Local Development | Cloud Production |
+|-------|------------------|------------------|
+| Data Generation | Python Script | Python Script |
+| Message Streaming | Apache Kafka | Google Pub/Sub |
+| Orchestration | Apache Airflow | Cloud Function |
+| Data Warehouse | PostgreSQL | BigQuery |
+| Transformations | dbt Core | Direct SQL |
+| Analytics | Streamlit | Streamlit |
+| Infrastructure | Docker Compose | Terraform |
+
+## Architecture Decisions
+
+**dbt Integration Strategy:**
+- **Local Development**: Full dbt Core integration with Airflow orchestration
+- **Cloud Production**: Direct BigQuery to Dashboard for demo efficiency  
+- **Future Scaling**: dbt models ready for dbt Cloud or containerized deployment
+
+**Why This Hybrid Approach:**
+- Cost optimization: Avoids unnecessary dbt Cloud costs for demonstration
+- Complexity management: Focuses on core streaming architecture  
+- Production ready: Transformation logic exists and could be deployed instantly
+
+## Key Features
+
+- Real-time data processing with automatic anomaly detection
+- Dimensional modeling with staging to marts architecture
+- Infrastructure as Code using Terraform (13 Google Cloud resources)
+- Cost optimization with partitioned tables and demo-friendly settings
+- Environment-aware applications (local/cloud mode switching)
+- Comprehensive data quality testing with dbt
+
+## Getting Started
+
+### Option 1: Cloud Production Deployment (Recommended)
+
+Deploy to Google Cloud with minimal, demo-friendly architecture:
+
 ```bash
-docker compose up -d
-```
-This boots: Zookeeper, Kafka, Postgres, Airflow Webserver/Scheduler, and a lightweight Kafka UI.
+# 1. Set up environment
+python3 -m venv .venv
+source .venv/bin/activate
+export GCP_PROJECT_ID=your-project-id
 
-3) **Init Postgres schema** (first run only):
+# 2. Configure Terraform variables
+cd terraform
+cp terraform.tfvars.example terraform.tfvars
+# Edit terraform.tfvars with your project_id  
+
+cd ..
+
+# 3. One-command deployment (includes function source creation)
+./scripts/run-cloud.sh
+
+# 4. Start applications with explicit mode
+# Data generator
+python3 src/generator/simulate_stream.py cloud --project-id your-project-id
+# Dashboard (export variables since streamlit doesn't take arguments)
+export DASHBOARD_MODE=cloud 
+export GCP_PROJECT_ID=your-project-id 
+streamlit run src/dashboard/app.py
+```
+
+**Benefits**: Serverless, auto-scaling, monitoring, cost controls, CI/CD
+**Cost**: ~$5-10/month with cost-optimized demo settings (3 sensors, 1-minute intervals)
+
+### Option 2: Local Development
+
+Run locally for development and testing:
+
 ```bash
-docker compose exec postgres psql -U postgres -d iot -f /docker-entrypoint-initdb.d/init.sql
+# 1. Set up environment
+python3 -m venv .venv
+source .venv/bin/activate
+
+# 2. One-command setup
+./scripts/run-local.sh
+
+       # 3. Start applications
+       python3 src/generator/simulate_stream.py local  # Data generator
+       streamlit run src/dashboard/app.py             # Dashboard (defaults to local)
+
+# 4. Enable Airflow pipeline (optional)
+# Visit http://localhost:8080 (username: airflow, password: airflow) 
+# and trigger the 'iot_pipeline' DAG manually
 ```
 
-4) **Start the simulator** (from your host):
-```bash
-pip install -r generator/requirements.txt
-python generator/simulate_stream.py
+**Access Points**:
+- Dashboard: http://localhost:8501
+- Airflow: http://localhost:8080
+- Kafka UI: http://localhost:8085
+
+## Project Structure
+
 ```
-It sends JSON messages to Kafka topic `sensor.readings`.
-
-5) **Airflow UI** at http://localhost:8080 (user: `airflow`, pass: `airflow`).
-   - Turn on the DAG **iot_pipeline** to:
-     - Read from Kafka and land raw JSON into Postgres (`raw_sensor_readings`)
-     - Run dbt models to build `stg_` and `dim_/fact_` tables
-
-6) **Run the dashboard** (from host, new terminal):
-```bash
-pip install -r dashboard/requirements.txt
-streamlit run dashboard/app.py
-```
-Dashboard at http://localhost:8501.
-
-## BigQuery Option
-If you prefer BigQuery over Postgres:
-- Create a service account key JSON and mount it in `docker-compose.yml` (see commented lines).
-- Swap the Airflow task to use `BigQueryInsertJobOperator` (comment included in DAG).
-
-## Repo Structure
-```
-airflow/
-  dags/iot_pipeline.py
-dbt/
-  models/staging/*.sql
-  models/marts/*.sql
-generator/
-  simulate_stream.py
-dashboard/
-  app.py
-sql/
-  init.sql
-diagrams/
-  architecture.mmd
+├── src/                      # Unified source code (DRY principle)
+│   ├── dashboard/           # Environment-aware Streamlit dashboard
+│   ├── generator/           # Unified data generator (Kafka + Pub/Sub)
+│   └── requirements.txt     # Consolidated dependencies
+├── scripts/                  # Deployment automation
+│   ├── run-local.sh         # Local development setup
+│   └── run-cloud.sh         # Cloud deployment script
+├── terraform/                # Infrastructure as Code (Google Cloud)
+│   ├── main.tf              # Core resources (Pub/Sub, BigQuery, Cloud Function)
+│   ├── variables.tf         # Input variables
+│   ├── outputs.tf           # Output values
+│   └── terraform.tfvars     # Configuration (copy from .example)
+├── cloud/                    # Cloud-specific configurations
+│   └── functions/           # Cloud Function source code
+│       ├── main.py          # Pub/Sub to BigQuery processor
+│       └── requirements.txt # Function dependencies
+├── airflow/dags/            # Workflow orchestration (local development)
+├── dbt/models/              # Data transformations (staging to marts)
+├── sql/                     # Database schemas
+└── diagrams/                # Architecture documentation
 ```
 
-## 🎤 Interview Talking Points
+## Additional Resources
+
+- [Cloud Deployment Guide](terraform/README.md): Complete Terraform documentation
+- [Architecture Diagrams](diagrams/): Detailed technical diagrams
+  - [Local vs Cloud Migration](diagrams/local-vs-cloud.mmd)
+  - [Data Flow Details](diagrams/data-flow.mmd)  
+  - [Infrastructure Components](diagrams/terraform-resources.mmd)
+
+## Technical Highlights
 
 **Architecture Decisions**:
-- **Kafka vs Batch**: Real-time streaming enables immediate anomaly detection vs waiting hours for batch processing
-- **Airflow Orchestration**: Reliable scheduling, retry logic, and dependency management for production workloads
-- **dbt for Transformations**: Version-controlled, testable SQL transformations with lineage tracking
-
-**Data Quality & Reliability**:
-- **Comprehensive Testing**: Range validations, uniqueness constraints, and referential integrity checks
-- **Staging Layer**: Clean, typed data before business logic to catch issues early
-- **Anomaly Detection**: Automated flagging of soil moisture drops for proactive maintenance
-
-**Scalability Considerations**:
-- **Incremental Models**: dbt incremental strategies for handling growing datasets
-- **Partitioning**: Time-based partitioning for query performance optimization  
-- **Cloud Migration**: BigQuery hooks provided for seamless cloud scaling
+- Streaming vs Batch: Real-time processing enables immediate anomaly detection
+- Serverless-First: Cloud Functions and Cloud Run for cost efficiency and scalability
+- Infrastructure as Code: Terraform for reproducible, version-controlled deployments
+- DRY Principle: Single codebase with environment detection (local/cloud)
 
 **Production Readiness**:
-- **Monitoring**: Airflow SLAs and task-level metrics for operational visibility
-- **Error Handling**: Retry policies and dead letter queues for fault tolerance
-- **Future Extensions**: ML model retraining pipelines, real-time alerting systems
+- Data Quality: Comprehensive dbt testing with range validations and referential integrity
+- Observability: Custom metrics, alerting, and budget monitoring
+- Security: IAM best practices, service accounts, and encrypted data storage
+- Scalability: Partitioned tables, auto-scaling, and cost optimization
+
+**DevOps Integration**:
+- CI/CD Pipeline: Automated testing, building, and deployment
+- Environment Management: Separate dev/staging/prod configurations  
+- Monitoring: Health checks, performance metrics, and anomaly detection
+
+## Cost Optimization
+
+The system includes intelligent cost controls for cloud deployment:
+
+**Smart Rate Limiting**:
+- Local Mode: 10 sensors, 1-second intervals (unlimited for development)
+- Cloud Mode: 3 sensors, 1-minute intervals (demo-friendly costs)
+
+**Cost Breakdown** (Cloud Mode):
+```
+Monthly: ~129,600 messages
+├── Pub/Sub: $5.18/month
+├── Cloud Functions: $0.05/month  
+├── BigQuery: $0.65/month
+└── Total: ~$5.88/month
+```
+
+**Budget Protection**: Terraform includes budget alerts and spending limits to prevent unexpected charges.
+
+## Cleanup
+
+Use standard Terraform commands:
+```bash
+cd terraform
+terraform destroy  # Remove all cloud resources
+```
 
 ---
-MIT License © You
+
+This project demonstrates enterprise-grade data engineering skills including streaming data processing, cloud architecture, Infrastructure as Code, and production monitoring - perfect for showcasing modern data platform capabilities.

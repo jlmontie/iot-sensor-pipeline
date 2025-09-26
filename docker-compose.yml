@@ -9,18 +9,19 @@ services:
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     depends_on: [zookeeper]
-    ports: ["9092:9092"]
+    ports: ["9092:9092", "9093:9093"]
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://localhost:9092
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
 
   kafka-ui:
     image: provectuslabs/kafka-ui:latest
-    ports: ["8085:8080"]
+    ports: ["8086:8080"]
     environment:
       KAFKA_CLUSTERS_0_NAME: local
       KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9092
@@ -32,7 +33,7 @@ services:
       POSTGRES_DB: ${POSTGRES_DB:-iot}
       POSTGRES_USER: ${POSTGRES_USER:-postgres}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
-    ports: ["5432:5432"]
+    ports: ["5433:5432"]
     volumes:
       - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
 
@@ -42,19 +43,30 @@ services:
     environment:
       AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-False}
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/iot
-      _PIP_ADDITIONAL_REQUIREMENTS: kafka-python==2.0.2 psycopg2-binary==2.9.9 dbt-postgres==1.7.10
-      # Uncomment for BigQuery support:
-      # _PIP_ADDITIONAL_REQUIREMENTS: kafka-python==2.0.2 psycopg2-binary==2.9.9 dbt-postgres==1.7.10 dbt-bigquery==1.7.7 google-cloud-bigquery==3.11.4
+      AIRFLOW__CORE__EXECUTOR: LocalExecutor
+      _PIP_ADDITIONAL_REQUIREMENTS: confluent-kafka>=2.3.0 psycopg2-binary==2.9.9 dbt-postgres==1.7.10
+      # Kafka configuration
+      KAFKA_BROKER: kafka:9092
+      KAFKA_TOPIC: sensor.readings
     user: "${AIRFLOW_UID:-50000}:${AIRFLOW_GID:-0}"
     command: >
-      bash -c "airflow db migrate &&
-               airflow users create --username airflow --password airflow --firstname A --lastname F --role Admin --email admin@example.com &&
-               airflow webserver & airflow scheduler"
+      bash -c "
+        airflow db migrate &&
+        airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
+        airflow webserver --port 8080 &
+        airflow scheduler
+      "
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs
       - ./airflow/plugins:/opt/airflow/plugins
+      - ./dbt:/opt/airflow/dbt
     ports: ["8080:8080"]
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
 
 # Uncomment for BigQuery integration:
 # volumes:
