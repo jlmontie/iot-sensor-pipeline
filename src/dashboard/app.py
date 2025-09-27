@@ -95,7 +95,7 @@ def get_sensor_data():
             soil_moisture
         FROM `{PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`
         ORDER BY event_time DESC
-        LIMIT 3000
+        LIMIT 10000
         """
     else:
         query = """
@@ -107,7 +107,7 @@ def get_sensor_data():
             soil_moisture
         FROM raw_sensor_readings
         ORDER BY event_time DESC
-        LIMIT 3000
+        LIMIT 10000
         """
 
     return fetch_data(query)
@@ -149,6 +149,7 @@ def get_aggregated_data():
 try:
     # Fetch data
     df_raw = get_sensor_data()
+    st.write(f"Raw data size: {df_raw.shape[0]}")
     df_agg = get_aggregated_data()
 
     if df_raw.empty:
@@ -184,8 +185,11 @@ try:
             df_raw["anomaly"].astype(int) * 10 + 5
         )  # 15 for anomalies, 5 for normal
 
+        # Sort data chronologically for proper time series visualization
+        df_moisture = df_raw.sort_values("timestamp")
+        
         fig_moisture = px.line(
-            df_raw,
+            df_moisture,
             x="timestamp",
             y="soil_moisture",
             color="sensor_id",

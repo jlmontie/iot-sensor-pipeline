@@ -11,7 +11,7 @@ from confluent_kafka import Consumer, KafkaError
 
 POSTGRES_CONN = "dbname=iot user=postgres password=postgres host=postgres port=5432"
 TOPIC = os.environ.get("KAFKA_TOPIC", "sensor.readings")
-BROKER = os.environ.get("KAFKA_BROKER", "kafka:9092")
+BROKER = os.environ.get("KAFKA_BROKER", "kafka:9093")
 
 def consume_and_load(**context):
     """Load data from Kafka to Postgres (or BigQuery if configured)"""

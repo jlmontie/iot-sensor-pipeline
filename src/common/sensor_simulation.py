@@ -63,7 +63,7 @@ def generate_sensor_reading(sensor_id, t_hour, add_noise=True):
     if add_noise:
         temp = jitter(temp, 0.1)
         humidity = jitter(humidity, 0.05)
-        moisture = jitter(moisture, 0.03)
+        moisture = jitter(moisture, 0.01)
     
     return {
         'temperature': round(temp, 2),
