@@ -186,8 +186,8 @@ CREATE TABLE raw_sensor_readings (
 
 The system supports both local development and cloud deployment:
 
-- **Local**: PostgreSQL + Docker Compose
-- **Cloud**: BigQuery + Google Cloud Run (configuration in terraform/)
+- **Local**: PostgreSQL + FastAPI + Streamlit (via Docker Compose)
+- **Cloud**: BigQuery + Cloud Run + Cloud Functions (via Terraform)
 
 ## Performance
 
@@ -206,26 +206,27 @@ The system supports both local development and cloud deployment:
 - **Data Processing**: SQLAlchemy for database abstraction
 
 ### Local Development Stack
-- **Database**: PostgreSQL 15 (containerized)
-- **Message Streaming**: Apache Kafka + Confluent Kafka Python client
-- **Workflow Orchestration**: Apache Airflow
-- **Containerization**: Docker + Docker Compose
+- **Database**: PostgreSQL 15 (containerized with Docker Compose)
+- **API Service**: FastAPI with uvicorn ASGI server
+- **Dashboard**: Streamlit with auto-refresh capabilities
+- **Data Generation**: Python scripts for sensor simulation
 - **Development Tools**: Python virtual environments, pip
 
 ### Cloud Production Stack
 - **Database**: Google BigQuery (serverless data warehouse)
-- **Message Streaming**: Google Cloud Pub/Sub
-- **Compute**: Google Cloud Run (serverless containers)
-- **Functions**: Google Cloud Functions (event-driven processing)
+- **API Service**: Google Cloud Run (containerized FastAPI)
+- **Dashboard**: Google Cloud Run (containerized Streamlit)
+- **Data Processing**: Google Cloud Functions (serverless event processing)
 - **Infrastructure as Code**: Terraform
 - **CI/CD**: GitHub Actions
 
 ### Data & Analytics
-- **Time Series Analysis**: Custom regression models
-- **Data Validation**: Pydantic models for type safety
-- **API Documentation**: Automatic OpenAPI/Swagger generation
-- **Visualization**: Plotly Express for interactive charts
-- **Real-time Updates**: WebSocket-like streaming via Streamlit
+- **Machine Learning**: scikit-learn regression models for time-series forecasting
+- **Data Processing**: pandas for data manipulation and analysis
+- **Data Validation**: Pydantic models for type safety and API contracts
+- **API Documentation**: Automatic OpenAPI/Swagger generation via FastAPI
+- **Visualization**: Plotly Express for interactive charts and dashboards
+- **Real-time Updates**: Streamlit auto-refresh for live data monitoring
 
 ### Development & Deployment
 - **Version Control**: Git with feature branch workflow
