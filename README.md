@@ -4,25 +4,40 @@ A production-ready analytical service that predicts optimal watering schedules f
 
 ## Overview
 
-This project demonstrates the deployment of a custom analytical tool (ForecastWater) as a professional REST API service. The system processes real-time IoT sensor data to predict when plants need watering, preventing crop stress and optimizing water usage.
+This project demonstrates the deployment of a custom analytical tool as a REST API service. The system processes real-time IoT sensor data to predict when plants need watering, preventing crop stress and optimizing water usage.
 
 ## Architecture
 
-```
-IoT Sensors → Database → ForecastWater API → Dashboard
-                      ↓
-               ML Predictions
+```mermaid
+graph LR
+    A[IoT Sensors] --> B[Database<br/>PostgreSQL/BigQuery]
+    B --> C[ForecastWater API<br/>FastAPI Service]
+    C --> D[Dashboard<br/>Streamlit UI]
+    C --> E[API Clients<br/>REST Endpoints]
+    
+    subgraph "ML Engine"
+        F[Regression<br/>Time Series Analysis]
+        G[Prediction Algorithm<br/>Drying Rate Calculation]
+    end
+    
+    C --> F
+    F --> G
+    G --> C
+    
+    style C fill:#e1f5fe
+    style F fill:#f3e5f5
+    style G fill:#f3e5f5
 ```
 
 **Components:**
 - **Analytics API**: FastAPI service exposing ML predictions via REST endpoints
 - **Dashboard**: Streamlit interface for real-time monitoring and visualization
 - **Database**: PostgreSQL (local) or BigQuery (cloud) for sensor data storage
-- **ML Model**: Custom linear regression forecasting algorithm
+- **ML Model**: Regression forecasting algorithm
 
 ## Key Features
 
-- **Predictive Analytics**: Forecasts watering needs 12-48 hours in advance
+- **Predictive Analytics**: Forecasts watering needs upt to 10 days in advance
 - **Real-time API**: Sub-100ms response times for prediction requests
 - **Interactive Dashboard**: Live sensor monitoring with auto-refresh
 - **Professional Documentation**: Auto-generated OpenAPI/Swagger docs
@@ -91,7 +106,7 @@ IoT Sensors → Database → ForecastWater API → Dashboard
 ## Technical Implementation
 
 ### Analytics Engine
-- **Algorithm**: Linear regression with time-series analysis
+- **Algorithm**: Regression with time-series analysis
 - **Features**: Soil moisture trends, drying rate calculation
 - **Performance**: R² accuracy scores typically 0.8+
 - **Scalability**: Handles thousands of sensors
@@ -113,7 +128,7 @@ IoT Sensors → Database → ForecastWater API → Dashboard
 1. **Data Ingestion**: Sensor readings stored in database
 2. **API Request**: Dashboard or client requests prediction
 3. **Data Processing**: Recent sensor data retrieved and processed
-4. **ML Prediction**: Linear regression model calculates drying rate
+4. **ML Prediction**: Regression model calculates drying rate
 5. **Response**: Prediction results returned via JSON API
 
 ## Development
@@ -126,7 +141,6 @@ src/
 │   ├── simple_forecaster.py # ML prediction engine
 │   └── data_adapter.py     # Data format conversion
 ├── dashboard/
-│   ├── app.py              # Basic dashboard
 │   └── enhanced_app.py     # API-integrated dashboard
 └── requirements.txt        # Python dependencies
 
@@ -182,13 +196,43 @@ The system supports both local development and cloud deployment:
 - **Memory Usage**: ~200MB per API instance
 - **Concurrent Users**: 100+ supported
 
-## Technologies
+## Technology Stack
 
-- **Backend**: Python, FastAPI, SQLAlchemy
+### Core Technologies
+- **Language**: Python 3.12+
+- **API Framework**: FastAPI with automatic OpenAPI documentation
 - **ML/Analytics**: scikit-learn, pandas, numpy
-- **Frontend**: Streamlit, Plotly
-- **Database**: PostgreSQL, BigQuery
-- **Infrastructure**: Docker, Terraform, Google Cloud
+- **Dashboard**: Streamlit with Plotly visualizations
+- **Data Processing**: SQLAlchemy for database abstraction
+
+### Local Development Stack
+- **Database**: PostgreSQL 15 (containerized)
+- **Message Streaming**: Apache Kafka + Confluent Kafka Python client
+- **Workflow Orchestration**: Apache Airflow
+- **Containerization**: Docker + Docker Compose
+- **Development Tools**: Python virtual environments, pip
+
+### Cloud Production Stack
+- **Database**: Google BigQuery (serverless data warehouse)
+- **Message Streaming**: Google Cloud Pub/Sub
+- **Compute**: Google Cloud Run (serverless containers)
+- **Functions**: Google Cloud Functions (event-driven processing)
+- **Infrastructure as Code**: Terraform
+- **CI/CD**: GitHub Actions
+
+### Data & Analytics
+- **Time Series Analysis**: Custom regression models
+- **Data Validation**: Pydantic models for type safety
+- **API Documentation**: Automatic OpenAPI/Swagger generation
+- **Visualization**: Plotly Express for interactive charts
+- **Real-time Updates**: WebSocket-like streaming via Streamlit
+
+### Development & Deployment
+- **Version Control**: Git with feature branch workflow
+- **Dependency Management**: pip with requirements.txt
+- **Environment Management**: Environment variables for configuration
+- **Monitoring**: Built-in health checks and logging
+- **Documentation**: Markdown with Mermaid diagrams
 
 ## License
 
