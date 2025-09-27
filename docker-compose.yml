@@ -49,12 +49,11 @@ services:
       KAFKA_BROKER: kafka:9092
       KAFKA_TOPIC: sensor.readings
     user: "0:0"  # Run as root to avoid permission issues
-    command: >
+    entrypoint: >
       bash -c "
         airflow db init &&
         airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
-        airflow webserver --port 8080 &
-        airflow scheduler
+        exec airflow standalone
       "
     volumes:
       - ./airflow/dags:/opt/airflow/dags

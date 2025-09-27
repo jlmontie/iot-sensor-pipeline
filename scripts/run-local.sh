@@ -27,9 +27,21 @@ pip install -r src/requirements.txt
 
 echo "Local environment ready!"
 echo ""
-echo "Next steps:"
-echo "1. Start data generator:    python3 src/generator/simulate_stream.py local"
-echo "2. Launch dashboard:        streamlit run src/dashboard/app.py"
-echo "3. Access Airflow:          http://localhost:8080 (airflow/airflow)"
-echo "4. Access Kafka UI:         http://localhost:8086"
+echo "Starting data generator..."
+python3 src/generator/simulate_stream.py local &
+DATA_GEN_PID=$!
+
+echo "Waiting for Airflow to be ready..."
+sleep 30
+
+echo ""
+echo "Local environment ready!"
+echo ""
+echo "Services:"
+echo "1. Data generator:          Running (PID: $DATA_GEN_PID)"
+echo "2. Dashboard:               streamlit run src/dashboard/app.py"
+echo "3. Airflow:                 http://localhost:8080 (airflow/airflow)"
+echo "4. Kafka UI:                http://localhost:8086"
+echo ""
+echo "To stop data generator: kill $DATA_GEN_PID"
 echo ""
