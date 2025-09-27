@@ -35,6 +35,10 @@ echo ""
 echo "Frontloading dashboard with 1000 historical data points..."
 python3 scripts/frontload-dashboard-data.py
 
+echo "Waiting for Airflow to install confluent-kafka dependency..."
+echo "This may take 30-60 seconds on first run..."
+sleep 45
+
 echo "Starting real-time data generator..."
 python3 src/generator/simulate_stream.py local &
 DATA_GEN_PID=$!
@@ -43,7 +47,7 @@ echo "Waiting for services to be ready..."
 sleep 10
 
 echo ""
-echo "Local environment ready!"
+echo "=== LOCAL ENVIRONMENT READY ==="
 echo ""
 echo "Services:"
 echo "1. Real-time data generator: Running (PID: $DATA_GEN_PID)"
@@ -51,8 +55,12 @@ echo "2. Dashboard:               streamlit run src/dashboard/app.py"
 echo "3. Airflow:                 http://localhost:8080 (airflow/airflow)"
 echo "4. Kafka UI:                http://localhost:8086"
 echo ""
-echo "To stop data generator:"
-echo "  kill $DATA_GEN_PID"
+echo "To stop everything:"
+echo "  ./scripts/stop-local.sh"
 echo ""
 echo "Dashboard shows 6 weeks of historical data + live real-time updates!"
+echo ""
+echo "TROUBLESHOOTING:"
+echo "- If no new data appears in dashboard, check Airflow DAG at http://localhost:8080"
+echo "- Manual trigger: Go to Airflow UI > DAGs > iot_pipeline > Trigger DAG"
 echo ""
