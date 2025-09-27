@@ -1,1 +1,0 @@
-SELECT DISTINCT sensor_id FROM {{ ref('stg_sensor_readings') }}

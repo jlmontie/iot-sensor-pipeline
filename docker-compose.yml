@@ -1,32 +1,4 @@
 services:
-  zookeeper:
-    image: confluentinc/cp-zookeeper:7.5.0
-    environment:
-      ZOOKEEPER_CLIENT_PORT: 2181
-      ZOOKEEPER_TICK_TIME: 2000
-    ports: ["2181:2181"]
-
-  kafka:
-    image: confluentinc/cp-kafka:7.5.0
-    depends_on: [zookeeper]
-    ports: ["9092:9092", "9093:9093"]
-    environment:
-      KAFKA_BROKER_ID: 1
-      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9093,PLAINTEXT_HOST://localhost:9092
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
-      KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
-      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9093,PLAINTEXT_HOST://0.0.0.0:9092
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:latest
-    ports: ["8086:8080"]
-    environment:
-      KAFKA_CLUSTERS_0_NAME: local
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:9093
-    depends_on: [kafka]
-
   postgres:
     image: postgres:15
     environment:
@@ -35,46 +7,12 @@ services:
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
     ports: ["5433:5432"]
     volumes:
-      - ./sql/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - postgres_data:/var/lib/postgresql/data
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+    command: >
+      postgres -c 'shared_preload_libraries=pg_stat_statements'
+               -c 'pg_stat_statements.track=all'
+               -c 'log_statement=all'
 
-  airflow:
-    image: apache/airflow:2.9.2
-    depends_on: [postgres, kafka]
-    environment:
-      AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-False}
-      AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/iot
-      AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      # Kafka configuration
-      KAFKA_BROKER: kafka:9093
-      KAFKA_TOPIC: sensor.readings
-    user: "0:0"  # Run as root to handle permissions, but switch to airflow user for pip
-    entrypoint: 
-      - bash
-      - -c
-      - |
-        # Install additional Python packages as airflow user (Airflow's pip requires this)
-        su airflow -c "pip install confluent-kafka>=2.3.0 psycopg2-binary==2.9.9 dbt-postgres==1.7.10"
-        # Initialize Airflow (as root for database permissions)
-        airflow db init
-        airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true
-        exec airflow standalone
-    volumes:
-      - ./airflow/dags:/opt/airflow/dags
-      - ./airflow/logs:/opt/airflow/logs
-      - ./airflow/plugins:/opt/airflow/plugins
-      - ./dbt:/opt/airflow/dbt
-    ports: ["8080:8080"]
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-# Uncomment for BigQuery integration:
-# volumes:
-#   - ./airflow/.env_files/gcp-key.json:/opt/airflow/gcp-key.json:ro
-# 
-# Then add to airflow service environment:
-# GOOGLE_APPLICATION_CREDENTIALS: /opt/airflow/gcp-key.json
-# GCP_PROJECT_ID: your-project-id
-# BQ_DATASET: iot_pipeline
+volumes:
+  postgres_data:

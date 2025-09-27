@@ -35,18 +35,16 @@ echo ""
 echo "Frontloading dashboard with 1000 historical data points..."
 python3 scripts/frontload-dashboard-data.py
 
-echo "Waiting for Airflow to install confluent-kafka dependency..."
-echo "This may take 30-60 seconds on first run..."
-sleep 45
+echo "Waiting for PostgreSQL to initialize..."
+sleep 10
 
 echo ""
 echo "=== LOCAL ENVIRONMENT READY ==="
 echo ""
 echo "Services:"
-echo "1. Real-time data generator: Running (PID: $DATA_GEN_PID)"
-echo "2. Dashboard:               streamlit run src/dashboard/enhanced_app.py"
-echo "3. Airflow:                 http://localhost:8080 (airflow/airflow)"
-echo "4. Kafka UI:                http://localhost:8086"
+echo "1. PostgreSQL Database:     localhost:5433 (postgres/postgres)"
+echo "2. Real-time data generator: Running (PID: $DATA_GEN_PID)"
+echo "3. Dashboard:               streamlit run src/dashboard/enhanced_app.py"
 echo ""
 echo "To stop everything:"
 echo "  ./scripts/stop-local.sh"
