@@ -62,7 +62,7 @@ def consume_and_load(**context):
                 rec = json.loads(msg.value().decode('utf-8'))
                 cur.execute(
                     """INSERT INTO raw_sensor_readings(event_time, sensor_id, temperature_c, humidity_pct, soil_moisture, payload)
-                          VALUES (to_timestamp(%s), %s, %s, %s, %s, %s)""",
+                          VALUES (%s::timestamp, %s, %s, %s, %s, %s)""",
                     (rec["timestamp"], rec["sensor_id"], rec.get("temperature_c"), rec.get("humidity_pct"),
                      rec.get("soil_moisture"), json.dumps(rec)),
                 )
