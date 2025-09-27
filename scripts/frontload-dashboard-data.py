@@ -99,9 +99,26 @@ def main():
         # Frontload historical data
         historical_count = frontload_historical_data(conn, cursor, sensors, 1000)
         
-        print(f"\nHistorical data ready! Dashboard should now show rich data.")
+        # Save simulation metadata for continuity
+        current_time = datetime.now(timezone.utc)
+        simulation_metadata = {
+            'frontload_hours': 1000,
+            'frontload_end_time': current_time.isoformat(),
+            'sensors': sensors
+        }
+        
+        try:
+            import json
+            with open('.simulation_metadata.json', 'w') as f:
+                json.dump(simulation_metadata, f, indent=2)
+            print("💾 Saved simulation metadata for real-time continuity")
+        except Exception as e:
+            print(f"⚠️  Could not save simulation metadata: {e}")
+        
+        print(f"\n📊 Historical data ready! Dashboard should now show rich data.")
         print(f"✅ Frontloading complete. Use src/generator/simulate_stream.py for real-time data.")
         print(f"💡 Run: python3 src/generator/simulate_stream.py local")
+        print(f"🔗 Real-time generator will automatically continue from hour 1000 for seamless data")
             
     except KeyboardInterrupt:
         historical_count = historical_count if 'historical_count' in locals() else 0

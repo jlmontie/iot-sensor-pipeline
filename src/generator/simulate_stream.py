@@ -88,6 +88,101 @@ class MessageProducer:
             self.producer.flush()
 
 
+def get_simulation_time_offset():
+    """
+    Calculate the simulation time offset to continue from where frontloading left off.
+    
+    For local mode: Queries PostgreSQL to find the latest historical data timestamp
+    For cloud mode: Uses standard 1000-hour offset (BigQuery query would be more complex)
+    """
+    if CLOUD_MODE:
+        # For cloud mode, use standard frontload parameters
+        FRONTLOAD_HOURS = 1000
+        print(f"Cloud mode: Continuing simulation from hour {FRONTLOAD_HOURS}")
+        return FRONTLOAD_HOURS
+    
+    # For local mode, try to detect the actual end of historical data
+    
+    # First, try to read simulation metadata file
+    try:
+        import json
+        with open('.simulation_metadata.json', 'r') as f:
+            metadata = json.load(f)
+        
+        frontload_hours = metadata.get('frontload_hours', 1000)
+        frontload_end_str = metadata.get('frontload_end_time')
+        
+        if frontload_end_str:
+            from datetime import datetime, timezone
+            frontload_end_time = datetime.fromisoformat(frontload_end_str.replace('Z', '+00:00'))
+            current_time = datetime.now(timezone.utc)
+            
+            # Calculate time since frontloading completed
+            time_diff = current_time - frontload_end_time
+            hours_since_frontload = time_diff.total_seconds() / 3600
+            
+            # Continue from where frontloading left off
+            simulation_offset = frontload_hours + hours_since_frontload
+            
+            print(f"Using simulation metadata: frontload ended {hours_since_frontload:.1f} hours ago")
+            print(f"Continuing simulation from hour {simulation_offset:.1f} for seamless continuity")
+            
+            return simulation_offset
+    except Exception as e:
+        print(f"No simulation metadata found: {e}")
+    
+    # Fallback: Query database directly
+    try:
+        import psycopg2
+        from datetime import datetime, timezone
+        
+        # Database connection (same as frontload script)
+        DB_CONFIG = {
+            'host': 'localhost',
+            'port': 5433,
+            'database': 'iot',
+            'user': 'postgres',
+            'password': 'postgres'
+        }
+        
+        conn = psycopg2.connect(**DB_CONFIG)
+        cursor = conn.cursor()
+        
+        # Find the latest timestamp in historical data
+        cursor.execute("""
+            SELECT MAX(event_time) FROM raw_sensor_readings 
+            WHERE sensor_id LIKE 'SENSOR-%'
+        """)
+        
+        result = cursor.fetchone()
+        conn.close()
+        
+        if result[0]:
+            latest_historical_time = result[0]
+            current_time = datetime.now(timezone.utc)
+            
+            # Calculate how many hours of historical data we have
+            time_diff = current_time - latest_historical_time.replace(tzinfo=timezone.utc)
+            hours_behind = time_diff.total_seconds() / 3600
+            
+            # The simulation should continue from where historical data ended
+            # Historical data spans 1000 hours ending at latest_historical_time
+            # So simulation time should be 1000 + hours_behind
+            simulation_offset = 1000 + hours_behind
+            
+            print(f"Database query: historical data ending {hours_behind:.1f} hours ago")
+            print(f"Continuing simulation from hour {simulation_offset:.1f} for seamless continuity")
+            
+            return simulation_offset
+        else:
+            print("No historical data found, starting simulation from hour 0")
+            return 0
+            
+    except Exception as e:
+        print(f"Could not detect historical data end time: {e}")
+        print("Using default 1000-hour offset")
+        return 1000
+
 def main():
     producer = MessageProducer()
 
@@ -109,6 +204,9 @@ def main():
     if CLOUD_MODE:
         print(f"Sending data every {sleep_interval} seconds to minimize costs")
 
+    # Get the time offset to continue from where frontloading left off
+    simulation_hour_offset = get_simulation_time_offset()
+    
     start_time = datetime.now(timezone.utc)
     message_count = 0
 
@@ -123,7 +221,8 @@ def main():
         while True:
             # Calculate elapsed time and current timestamp
             elapsed_seconds = time.time() - start_time.timestamp()
-            t_hour = elapsed_seconds / 3600  # Convert to hours for pattern generation
+            # Add the simulation offset to continue from where frontloading left off
+            t_hour = simulation_hour_offset + (elapsed_seconds / 3600)  # Continue simulation timeline
             current_timestamp = start_time + timedelta(seconds=elapsed_seconds)
 
             for sensor_id in sensors:

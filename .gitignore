@@ -33,7 +33,11 @@ terraform.tfstate.*.backup
 
 # === Logs and Outputs ===
 *.log
+
+# Runtime simulation metadata
+.simulation_metadata.json
 *.out
+
 
 # === Personal and Local Files ===
 *.local*
@@ -58,3 +62,4 @@ dbt/package-lock.yml
 # === Miscellaneous ===
 *.swp
 *.swo
+*tmp.ipynb
