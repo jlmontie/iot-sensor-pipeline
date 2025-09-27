@@ -7,57 +7,11 @@ Generates 1000 hourly historical readings (~6 weeks) for 3 sensors
 import os
 import sys
 import time
-import random
-import math
 from datetime import datetime, timezone, timedelta
 from google.cloud import bigquery
 
-
-def jitter(value, noise_level=0.05):
-    """Add realistic noise to sensor readings"""
-    return value + random.gauss(0, noise_level * abs(value))
-
-
-def generate_temperature(sensor_id, t_hour):
-    """Generate temperature with daily and seasonal cycles"""
-    base_temp = 20 + 5 * math.sin(2 * math.pi * t_hour / (24 * 30))  # Monthly cycle
-    daily_variation = 3 * math.sin(2 * math.pi * t_hour / 24)
-    sensor_offset = (hash(sensor_id) % 100) / 100
-    return base_temp + daily_variation + sensor_offset
-
-
-def generate_humidity(sensor_id, t_hour):
-    """Generate humidity with daily and seasonal cycles"""
-    base_humidity = 60 + 10 * math.sin(2 * math.pi * t_hour / (24 * 30))
-    daily_variation = 5 * math.sin(2 * math.pi * t_hour / 24 + math.pi / 2)
-    sensor_offset = (hash(sensor_id) % 100) / 200
-    return base_humidity + daily_variation + sensor_offset
-
-
-def generate_moisture(sensor_id, t_hour):
-    """Generate soil moisture with realistic watering cycles using exponential decay"""
-    # Watering cycle parameters (customized per sensor)
-    sensor_hash = hash(sensor_id) % 1000
-    period = 168 + (sensor_hash % 48)  # 7±2 day watering cycles
-    tau = 60 + (sensor_hash % 40)  # Decay rate variation
-    amplitude = 0.8 + (sensor_hash % 100) / 500  # Peak moisture level
-
-    # Phase within watering cycle [0, period)
-    phase = t_hour % period
-
-    # Exponential decay from peak moisture after watering
-    base_moisture = amplitude * math.exp(-phase / tau)
-
-    # Add small daily variation (evaporation patterns)
-    daily_variation = 0.05 * math.sin(2 * math.pi * t_hour / 24)
-
-    # Sensor-specific offset for calibration differences
-    sensor_offset = (sensor_hash % 50) / 1000
-
-    moisture = base_moisture + daily_variation + sensor_offset
-
-    # Ensure realistic bounds (soil never completely dry or oversaturated)
-    return max(0.15, min(0.9, moisture))
+# Import shared sensor simulation functions
+from src.common import generate_sensor_reading
 
 
 def frontload_historical_data(client, table_ref, sensors, num_points=1000):
@@ -84,22 +38,16 @@ def frontload_historical_data(client, table_ref, sensors, num_points=1000):
         hours_from_start = (point_time.timestamp() - (current_time - timedelta(hours=num_points)).timestamp()) / 3600
         
         for sensor_id in sensors:
-            temp = generate_temperature(sensor_id, hours_from_start)
-            humidity = generate_humidity(sensor_id, hours_from_start)
-            moisture = generate_moisture(sensor_id, hours_from_start)
-            
-            # Add noise
-            temp = jitter(temp, 0.1)
-            humidity = jitter(humidity, 0.05)
-            moisture = jitter(moisture, 0.03)
+            # Generate sensor reading using shared simulation functions
+            reading = generate_sensor_reading(sensor_id, hours_from_start, add_noise=True)
             
             # Add to batch
             rows_to_insert.append({
                 "sensor_id": sensor_id,
                 "timestamp": point_time.isoformat(),
-                "temperature": round(temp, 2),
-                "humidity": round(humidity, 1),
-                "soil_moisture": round(moisture, 3),
+                "temperature": reading['temperature'],
+                "humidity": reading['humidity'],
+                "soil_moisture": reading['soil_moisture'],
             })
         
         # Progress update

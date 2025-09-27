@@ -7,10 +7,11 @@ Use src/generator/simulate_stream.py for real-time data generation.
 
 import os
 import time
-import random
-import math
 import psycopg2
 from datetime import datetime, timezone, timedelta
+
+# Import shared sensor simulation functions
+from src.common import generate_sensor_reading
 
 # Database connection
 DB_CONFIG = {
@@ -21,45 +22,7 @@ DB_CONFIG = {
     'password': 'postgres'
 }
 
-def generate_temperature(sensor_id, t_hour):
-    """Generate temperature with daily cycles"""
-    base_temp = 20 + 5 * math.sin(2 * math.pi * t_hour / (24 * 30))
-    daily_variation = 3 * math.sin(2 * math.pi * t_hour / 24)
-    sensor_offset = (hash(sensor_id) % 100) / 100
-    return base_temp + daily_variation + sensor_offset
-
-def generate_humidity(sensor_id, t_hour):
-    """Generate humidity with daily cycles"""
-    base_humidity = 60 + 10 * math.sin(2 * math.pi * t_hour / (24 * 30))
-    daily_variation = 5 * math.sin(2 * math.pi * t_hour / 24 + math.pi / 2)
-    sensor_offset = (hash(sensor_id) % 100) / 200
-    return base_humidity + daily_variation + sensor_offset
-
-def generate_moisture(sensor_id, t_hour):
-    """Generate soil moisture with realistic watering cycles using exponential decay"""
-    sensor_hash = hash(sensor_id) % 1000
-    period = 168 + (sensor_hash % 48)  # 7±2 day watering cycles
-    tau = 60 + (sensor_hash % 40)      # Decay rate variation
-    amplitude = 0.8 + (sensor_hash % 100) / 500  # Peak moisture level
-    
-    # Phase within watering cycle
-    phase = t_hour % period
-    
-    # Exponential decay from peak moisture after watering
-    base_moisture = amplitude * math.exp(-phase / tau)
-    
-    # Add small daily variation
-    daily_variation = 0.05 * math.sin(2 * math.pi * t_hour / 24)
-    
-    # Sensor-specific offset
-    sensor_offset = (sensor_hash % 50) / 1000
-    
-    moisture = base_moisture + daily_variation + sensor_offset
-    return max(0.15, min(0.9, moisture))
-
-def jitter(value, noise_level=0.05):
-    """Add realistic noise to sensor readings"""
-    return value + random.gauss(0, noise_level * abs(value))
+# Sensor simulation functions moved to src/common/sensor_simulation.py
 
 def frontload_historical_data(conn, cursor, sensors, num_points=1000):
     """Insert historical data points for immediate dashboard visualization
@@ -83,14 +46,8 @@ def frontload_historical_data(conn, cursor, sensors, num_points=1000):
         hours_from_start = (point_time.timestamp() - (current_time - timedelta(hours=num_points)).timestamp()) / 3600
         
         for sensor_id in sensors:
-            temp = generate_temperature(sensor_id, hours_from_start)
-            humidity = generate_humidity(sensor_id, hours_from_start)
-            moisture = generate_moisture(sensor_id, hours_from_start)
-            
-            # Add noise
-            temp = jitter(temp, 0.1)
-            humidity = jitter(humidity, 0.05)
-            moisture = jitter(moisture, 0.03)
+            # Generate sensor reading using shared simulation functions
+            reading = generate_sensor_reading(sensor_id, hours_from_start, add_noise=True)
             
             # Insert into database
             cursor.execute("""
@@ -98,7 +55,7 @@ def frontload_historical_data(conn, cursor, sensors, num_points=1000):
                 (sensor_id, event_time, temperature_c, humidity_pct, soil_moisture)
                 VALUES (%s, %s, %s, %s, %s)
             """, (sensor_id, point_time, 
-                  round(temp, 2), round(humidity, 1), round(moisture, 3)))
+                  reading['temperature'], reading['humidity'], reading['soil_moisture']))
             
             count += 1
         

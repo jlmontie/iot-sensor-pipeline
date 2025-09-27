@@ -220,7 +220,7 @@ try:
             x="timestamp",
             y="soil_moisture",
             color="sensor_id",
-            size="anomaly_size",
+            # size="anomaly_size",
             title="Soil Moisture Levels (Large points = Low moisture alerts)",
         )
         st.plotly_chart(fig_moisture, use_container_width=True)
