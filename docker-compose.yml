@@ -45,7 +45,7 @@ services:
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/iot
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
       # Kafka configuration
-      KAFKA_BROKER: kafka:9092
+      KAFKA_BROKER: kafka:9093
       KAFKA_TOPIC: sensor.readings
     user: "0:0"  # Run as root to handle permissions, but switch to airflow user for pip
     entrypoint: 
