@@ -6,7 +6,7 @@ import math
 import signal
 import sys
 import argparse
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 
 def parse_args():
@@ -136,20 +136,20 @@ def main():
         sensors = [f"SENSOR-{i:03d}" for i in range(1, 4)]  # Only 3 sensors for cloud
         sleep_interval = 60  # 1 minute between batches (much cheaper!)
         print("Cloud mode: Using cost-optimized settings (3 sensors, 1 min intervals)")
-        print("Estimated cost: ~$5-10/month instead of $1000+")
+        print("Estimated cost: ~$5-10/month")
     else:
         sensors = [f"SENSOR-{i:03d}" for i in range(1, 11)]  # 10 sensors for local
         sleep_interval = 1  # 1 second for local demo
         print("Local mode: Using full simulation (10 sensors, 1 sec intervals)")
 
     mode_text = "Cloud (Pub/Sub)" if CLOUD_MODE else "Local (Kafka)"
-    print(f"🚀 Streaming sensor data in {mode_text} mode...")
-    print(f"📊 Simulating {len(sensors)} sensors. Press Ctrl+C to stop.")
+    print(f"Streaming sensor data in {mode_text} mode...")
+    print(f"Simulating {len(sensors)} sensors. Press Ctrl+C to stop.")
 
     if CLOUD_MODE:
         print(f"Sending data every {sleep_interval} seconds to minimize costs")
 
-    t0 = time.time()
+    start_time = datetime.now(timezone.utc)
     message_count = 0
 
     def shutdown_handler(sig, frame):
@@ -161,8 +161,10 @@ def main():
 
     try:
         while True:
-            t = time.time() - t0
-            t_hour = t / 3600  # Convert to hours
+            # Calculate elapsed time and current timestamp
+            elapsed_seconds = time.time() - start_time.timestamp()
+            t_hour = elapsed_seconds / 3600  # Convert to hours for pattern generation
+            current_timestamp = start_time + timedelta(seconds=elapsed_seconds)
 
             for sensor_id in sensors:
                 temp = generate_temperature(sensor_id, t_hour)
@@ -171,10 +173,10 @@ def main():
 
                 payload = {
                     "sensor_id": sensor_id,
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": current_timestamp.isoformat(),
                     "temperature": round(jitter(temp, 0.1), 2),
                     "humidity": round(jitter(humidity, 0.05), 1),
-                    "soil_moisture": round(jitter(moisture, 0.03), 3),
+                    "soil_moisture": round(jitter(moisture, 0.01), 2),
                     # Add legacy fields for local compatibility
                     **(
                         {

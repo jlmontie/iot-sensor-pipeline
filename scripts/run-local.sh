@@ -14,6 +14,10 @@ export POSTGRES_DB=iot
 export KAFKA_BROKER=localhost:9092
 export KAFKA_TOPIC=sensor.readings
 
+# Clean up any existing containers and volumes for fresh start
+echo "Cleaning up existing Docker resources..."
+docker compose down -v 2>/dev/null || true
+
 # Start services
 echo "Starting Docker services..."
 docker compose up -d
@@ -21,19 +25,20 @@ docker compose up -d
 echo "Waiting for services to be ready..."
 sleep 30
 
-# Install dependencies
-echo "Installing Python dependencies..."
+# Activate virtual environment and install dependencies
+echo "Activating virtual environment and installing dependencies..."
+source .venv/bin/activate
 pip install -r src/requirements.txt
 
 echo "Local environment ready!"
 echo ""
-echo "Starting data generator..."
-python3 src/generator/simulate_stream.py local &
-DATA_GEN_PID=$!
-
 echo "Frontloading dashboard with 1000 historical data points..."
 python3 scripts/frontload-dashboard-data.py &
 FRONTLOAD_PID=$!
+
+echo "Starting data generator..."
+python3 src/generator/simulate_stream.py local &
+DATA_GEN_PID=$!
 
 echo "Waiting for services to be ready..."
 sleep 30
