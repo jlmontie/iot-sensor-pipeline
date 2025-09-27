@@ -25,7 +25,7 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Custom CSS for better styling
+# Custom CSS
 st.markdown("""
 <style>
 .metric-card {
@@ -51,6 +51,12 @@ st.markdown("""
     padding: 1rem;
     border-radius: 0.5rem;
     border-left: 4px solid #4caf50;
+}
+/* Restrict main content width and center it */
+section[data-testid="stMain"] > div[data-testid="stMainBlockContainer"] {
+    max-width: 800px;
+    margin-left: auto;
+    margin-right: auto;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -89,7 +95,7 @@ def get_sensor_data():
             soil_moisture
         FROM `{PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`
         ORDER BY event_time DESC
-        LIMIT 10000
+        LIMIT 1000
         """
         return client.query(query).to_dataframe()
     else:
@@ -113,17 +119,17 @@ def get_sensor_data():
             soil_moisture
         FROM raw_sensor_readings
         ORDER BY event_time DESC
-        LIMIT 10000
+        LIMIT 1000
         """
         return pd.read_sql(text(query), engine)
 
 def main():
     # Header
-    st.title("🌱 IoT Agricultural Analytics Platform")
+    st.title("IoT Analytics Platform")
     st.markdown("**Real-time sensor monitoring with predictive watering analytics**")
     
     # Sidebar
-    st.sidebar.header("🔧 System Status")
+    st.sidebar.header("System Status")
     
     # API Health Check
     health_data = call_api("/health")
@@ -142,145 +148,87 @@ def main():
     # Mode indicator
     mode_text = "Cloud (BigQuery)" if CLOUD_MODE else "Local (PostgreSQL)"
     st.sidebar.info(f"**Mode**: {mode_text}")
+
+    # Sensor Summary Table
+    st.header("Sensor Status Summary")
     
-    # Main content
-    col1, col2 = st.columns([2, 1])
-    
-    with col1:
-        st.header("📊 Sensor Overview")
-        
-        # Get sensors from API
-        sensors_data = call_api("/sensors")
-        if sensors_data:
-            sensors_df = pd.DataFrame(sensors_data)
-            
-            # Display sensors table
-            st.subheader("Available Sensors")
-            display_df = sensors_df.copy()
-            display_df['date_range_start'] = pd.to_datetime(display_df['date_range_start']).dt.strftime('%Y-%m-%d %H:%M')
-            display_df['date_range_end'] = pd.to_datetime(display_df['date_range_end']).dt.strftime('%Y-%m-%d %H:%M')
-            display_df['moisture_range'] = display_df.apply(
-                lambda row: f"{row['moisture_range_min']:.3f} - {row['moisture_range_max']:.3f}", axis=1
-            )
-            
-            st.dataframe(
-                display_df[['sensor_id', 'total_readings', 'date_range_start', 'date_range_end', 'moisture_range']],
-                use_container_width=True
-            )
-        
-    with col2:
-        st.header("🔮 Predictions")
-        
-        # Auto-refresh toggle
-        auto_refresh = st.checkbox("Auto-refresh (30s)", value=True)
-        if auto_refresh:
-            time.sleep(0.1)  # Small delay to prevent too frequent updates
-        
-        # Manual refresh button
-        if st.button("🔄 Refresh Now"):
-            st.cache_data.clear()
-    
-    # Prediction Section
-    st.header("🚨 Watering Predictions & Alerts")
-    
+    # Get all sensors from API
+    sensors_data = call_api("/sensors")
     if sensors_data:
-        # Create tabs for each sensor
-        sensor_ids = [sensor['sensor_id'] for sensor in sensors_data]
-        tabs = st.tabs(sensor_ids)
+        summary_data = []
         
-        for i, sensor_id in enumerate(sensor_ids):
-            with tabs[i]:
-                # Get prediction for this sensor
-                prediction_data = call_api(f"/sensors/{sensor_id}/predict")
+        for sensor_meta in sensors_data:
+            sensor_id = sensor_meta.get("sensor_id", "Unknown")
+            
+            # Get prediction for this sensor
+            prediction_data = call_api(f"/sensors/{sensor_id}/predict")
+            
+            if prediction_data:
+                status = prediction_data.get("status", "Unknown")
+                predicted_date = prediction_data.get("predicted_watering_date")
+                critical_date = prediction_data.get("critical_watering_date")
+                current_moisture = prediction_data.get("current_moisture", 0)
                 
-                if prediction_data:
-                    # Status alert
-                    status = prediction_data.get("status", "Unknown")
-                    current_moisture = prediction_data.get("current_moisture", 0)
-                    
-                    if "CRITICAL" in status:
-                        st.markdown(f"""
-                        <div class="critical-alert">
-                            <h4>🚨 CRITICAL ALERT</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    elif "WARNING" in status:
-                        st.markdown(f"""
-                        <div class="warning-alert">
-                            <h4>⚠️ WARNING</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div class="success-alert">
-                            <h4>✅ STATUS OK</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Prediction metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric(
-                            "Current Moisture", 
-                            f"{current_moisture:.3f}",
-                            delta=None
-                        )
-                    
-                    with col2:
-                        drying_rate = prediction_data.get("drying_rate_per_hour", 0)
-                        st.metric(
-                            "Drying Rate/Hour", 
-                            f"{drying_rate:.6f}",
-                            delta=f"{'📉' if drying_rate < 0 else '📈'}"
-                        )
-                    
-                    with col3:
-                        accuracy = prediction_data.get("model_accuracy", 0)
-                        st.metric(
-                            "Model Accuracy (R²)", 
-                            f"{accuracy:.3f}",
-                            delta=None
-                        )
-                    
-                    with col4:
-                        samples = prediction_data.get("samples_used", 0)
-                        st.metric(
-                            "Data Points", 
-                            f"{samples:,}",
-                            delta=None
-                        )
-                    
-                    # Prediction dates
-                    st.subheader("📅 Watering Schedule")
-                    
-                    predicted_date = prediction_data.get("predicted_watering_date")
-                    critical_date = prediction_data.get("critical_watering_date")
-                    
-                    if predicted_date:
-                        pred_dt = datetime.fromisoformat(predicted_date.replace('Z', '+00:00'))
-                        hours_until = (pred_dt - datetime.now(pred_dt.tzinfo)).total_seconds() / 3600
-                        st.info(f"🕐 **Next watering recommended**: {pred_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until:.1f} hours from now)")
-                    
-                    if critical_date:
+                # Determine watering date
+                if "CRITICAL" in status:
+                    watering_date = "TODAY (Critical)"
+                elif critical_date:
+                    try:
                         crit_dt = datetime.fromisoformat(critical_date.replace('Z', '+00:00'))
-                        hours_until_critical = (crit_dt - datetime.now(crit_dt.tzinfo)).total_seconds() / 3600
-                        st.error(f"⚠️ **Critical watering deadline**: {crit_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until_critical:.1f} hours from now)")
-                    
-                    if not predicted_date and not critical_date:
-                        st.success("✅ No watering needed in the near future")
-                
+                        watering_date = crit_dt.strftime('%Y-%m-%d')
+                    except:
+                        watering_date = "Soon"
+                elif predicted_date:
+                    try:
+                        pred_dt = datetime.fromisoformat(predicted_date.replace('Z', '+00:00'))
+                        watering_date = pred_dt.strftime('%Y-%m-%d')
+                    except:
+                        watering_date = "Soon"
                 else:
-                    st.error(f"Failed to get predictions for {sensor_id}")
-    
+                    watering_date = "Not needed"
+                
+                summary_data.append({
+                    "Sensor ID": sensor_id,
+                    "Current Moisture": f"{current_moisture:.3f}",
+                    "Status": status,
+                    "Projected Watering Date": watering_date
+                })
+            else:
+                summary_data.append({
+                    "Sensor ID": sensor_id,
+                    "Current Moisture": "N/A",
+                    "Status": "API Error",
+                    "Projected Watering Date": "N/A"
+                })
+        
+        if summary_data:
+            df_summary = pd.DataFrame(summary_data)
+            
+            # Style the table based on status
+            def style_status(val):
+                if "CRITICAL" in val:
+                    return 'background-color: #ffebee; color: #d32f2f; font-weight: bold'
+                elif "WARNING" in val:
+                    return 'background-color: #fff3e0; color: #f57c00; font-weight: bold'
+                elif "OK" in val:
+                    return 'background-color: #e8f5e8; color: #388e3c; font-weight: bold'
+                return ''
+            
+            def style_watering_date(val):
+                if "TODAY" in val or "Critical" in val:
+                    return 'background-color: #ffebee; color: #d32f2f; font-weight: bold'
+                return ''
+            
+            styled_df = df_summary.style.applymap(style_status, subset=['Status']).applymap(style_watering_date, subset=['Projected Watering Date'])
+            
+            st.dataframe(styled_df, use_container_width=True, hide_index=True)
+        else:
+            st.warning("No sensor data available")
+    else:
+        st.error("Unable to fetch sensor data from API")
+
     # Historical Data Visualization
-    st.header("📈 Historical Data & Trends")
+    st.header("Historical Data & Trends")
     
     # Get raw sensor data for charts
     try:
@@ -307,51 +255,122 @@ def main():
                                  annotation_text="Warning Threshold (0.3)")
             
             st.plotly_chart(fig_moisture, use_container_width=True)
-            
-            # Temperature and Humidity charts
-            col1, col2 = st.columns(2)
-            
-            with col1:
-                fig_temp = px.line(
-                    df_moisture,
-                    x="timestamp",
-                    y="temperature",
-                    color="sensor_id",
-                    title="Temperature Trends"
-                )
-                st.plotly_chart(fig_temp, use_container_width=True)
-            
-            with col2:
-                fig_humidity = px.line(
-                    df_moisture,
-                    x="timestamp",
-                    y="humidity",
-                    color="sensor_id",
-                    title="Humidity Trends"
-                )
-                st.plotly_chart(fig_humidity, use_container_width=True)
-            
-            # Recent readings table
-            st.subheader("Recent Readings")
-            recent_data = df_raw.head(20).copy()
-            recent_data['timestamp'] = pd.to_datetime(recent_data['timestamp']).dt.strftime('%Y-%m-%d %H:%M:%S')
-            st.dataframe(recent_data, use_container_width=True)
         
         else:
             st.warning("No sensor data available")
     
     except Exception as e:
-        st.error(f"Error loading sensor data: {e}")
+        st.error(f"Error loading sensor data: {e}") 
+
+    # Get sensors from API
+    sensors_data = call_api("/sensors")
+        
+    # Prediction Section
+    st.header("Watering Predictions & Alerts")
     
+    if sensors_data:
+        # Create tabs for each sensor
+        sensor_ids = [sensor['sensor_id'] for sensor in sensors_data]
+        tabs = st.tabs(sensor_ids)
+        
+        for i, sensor_id in enumerate(sensor_ids):
+            with tabs[i]:
+                # Get prediction for this sensor
+                prediction_data = call_api(f"/sensors/{sensor_id}/predict")
+                
+                if prediction_data:
+                    # Status alert
+                    status = prediction_data.get("status", "Unknown")
+                    current_moisture = prediction_data.get("current_moisture", 0)
+                    
+                    if "CRITICAL" in status:
+                        st.markdown(f"""
+                        <div class="critical-alert">
+                            <h4>CRITICAL ALERT</h4>
+                            <p><strong>{sensor_id}</strong>: {status}</p>
+                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    elif "WARNING" in status:
+                        st.markdown(f"""
+                        <div class="warning-alert">
+                            <h4>WARNING</h4>
+                            <p><strong>{sensor_id}</strong>: {status}</p>
+                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    else:
+                        st.markdown(f"""
+                        <div class="success-alert">
+                            <h4>STATUS OK</h4>
+                            <p><strong>{sensor_id}</strong>: {status}</p>
+                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
+                        </div>
+                        """, unsafe_allow_html=True)
+                    
+                    # Prediction metrics
+                    col1, col2, col3, col4 = st.columns(4)
+                    
+                    with col1:
+                        st.metric(
+                            "Current Moisture", 
+                            f"{current_moisture:.3f}",
+                            delta=None
+                        )
+                    
+                    with col2:
+                        drying_rate = prediction_data.get("drying_rate_per_hour", 0)
+                        st.metric(
+                            "Drying Rate/Hour", 
+                            f"{drying_rate:.6f}",
+                            delta=f"{'Negative' if drying_rate < 0 else 'Positive'}"
+                        )
+                    
+                    with col3:
+                        accuracy = prediction_data.get("model_accuracy", 0)
+                        st.metric(
+                            "Model Accuracy (R²)", 
+                            f"{accuracy:.3f}",
+                            delta=None
+                        )
+                    
+                    with col4:
+                        samples = prediction_data.get("samples_used", 0)
+                        st.metric(
+                            "Data Points", 
+                            f"{samples:,}",
+                            delta=None
+                        )
+                    
+                    # Prediction dates
+                    st.subheader("Watering Schedule")
+                    
+                    predicted_date = prediction_data.get("predicted_watering_date")
+                    critical_date = prediction_data.get("critical_watering_date")
+                    
+                    if predicted_date:
+                        pred_dt = datetime.fromisoformat(predicted_date.replace('Z', '+00:00'))
+                        hours_until = (pred_dt - datetime.now(pred_dt.tzinfo)).total_seconds() / 3600
+                        st.info(f"**Next watering recommended**: {pred_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until:.1f} hours from now)")
+                    
+                    if critical_date:
+                        crit_dt = datetime.fromisoformat(critical_date.replace('Z', '+00:00'))
+                        hours_until_critical = (crit_dt - datetime.now(crit_dt.tzinfo)).total_seconds() / 3600
+                        st.error(f"**Critical watering deadline**: {crit_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until_critical:.1f} hours from now)")
+                    
+                    if not predicted_date and not critical_date:
+                        st.success("No watering needed in the near future")
+                
+                else:
+                    st.error(f"Failed to get predictions for {sensor_id}")
+      
     # Footer
     st.markdown("---")
-    st.markdown("**🔧 Technical Stack**: FastAPI • Streamlit • PostgreSQL/BigQuery • Plotly • Docker")
-    st.markdown(f"**📡 API Endpoint**: `{API_BASE_URL}`")
+    st.markdown("**Technical Stack**: FastAPI • Streamlit • PostgreSQL/BigQuery • Plotly • Docker")
+    st.markdown(f"**API Endpoint**: `{API_BASE_URL}`")
     
-    # Auto-refresh mechanism
-    if auto_refresh:
-        time.sleep(30)
-        st.rerun()
+    time.sleep(30)
+    st.rerun()
 
 if __name__ == "__main__":
     main()

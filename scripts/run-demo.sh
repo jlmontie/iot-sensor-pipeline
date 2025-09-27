@@ -54,7 +54,7 @@ fi
 
 # Start dashboard
 echo "2. Starting Dashboard (port 8501)..."
-streamlit run src/dashboard/enhanced_app.py &
+streamlit run src/dashboard/app.py &
 DASHBOARD_PID=$!
 
 echo ""

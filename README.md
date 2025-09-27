@@ -73,7 +73,7 @@ graph LR
    python api.py
    
    # Terminal 2: Dashboard
-   streamlit run src/dashboard/enhanced_app.py
+   streamlit run src/dashboard/app.py
    ```
 
 4. **Access the system**:
@@ -141,7 +141,7 @@ src/
 │   ├── simple_forecaster.py # ML prediction engine
 │   └── data_adapter.py     # Data format conversion
 ├── dashboard/
-│   └── enhanced_app.py     # API-integrated dashboard
+│   └── app.py              # API-integrated dashboard
 └── requirements.txt        # Python dependencies
 
 scripts/
