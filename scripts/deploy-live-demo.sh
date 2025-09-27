@@ -55,8 +55,8 @@ gsutil cp /tmp/function-source.zip gs://$FUNCTION_SOURCE_BUCKET/
 echo "Building and deploying dashboard image..."
 IMAGE_NAME="gcr.io/$GCP_PROJECT_ID/iot-dashboard:latest"
 
-# Build Docker image
-docker build -t $IMAGE_NAME .
+# Build Docker image for Linux/AMD64 (Cloud Run platform)
+docker build --platform linux/amd64 -t $IMAGE_NAME .
 
 # Push to Google Container Registry
 docker push $IMAGE_NAME

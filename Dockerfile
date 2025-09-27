@@ -1,5 +1,5 @@
 # Dockerfile for Streamlit Dashboard on Cloud Run
-FROM python:3.11-slim
+FROM --platform=linux/amd64 python:3.11-slim
 
 WORKDIR /app
 
@@ -22,9 +22,7 @@ ENV PORT=8080
 # Expose port
 EXPOSE 8080
 
-# Health check
-HEALTHCHECK --interval=30s --timeout=30s --start-period=5s --retries=3 \
-    CMD curl -f http://localhost:8080/_stcore/health || exit 1
+# Note: Health check removed - Cloud Run has built-in health checks
 
 # Run Streamlit
 CMD streamlit run src/dashboard/app.py \
