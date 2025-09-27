@@ -138,9 +138,9 @@ def main():
         print("Cloud mode: Using cost-optimized settings (3 sensors, 1 min intervals)")
         print("Estimated cost: ~$5-10/month")
     else:
-        sensors = [f"SENSOR-{i:03d}" for i in range(1, 11)]  # 10 sensors for local
+        sensors = [f"SENSOR-{i:03d}" for i in range(1, 6)]  # 5 sensors for local (matches frontload script)
         sleep_interval = 1  # 1 second for local demo
-        print("Local mode: Using full simulation (10 sensors, 1 sec intervals)")
+        print("Local mode: Using full simulation (5 sensors, 1 sec intervals)")
 
     mode_text = "Cloud (Pub/Sub)" if CLOUD_MODE else "Local (Kafka)"
     print(f"Streaming sensor data in {mode_text} mode...")
