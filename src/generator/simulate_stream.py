@@ -60,12 +60,29 @@ def generate_humidity(sensor_id, t_hour):
 
 
 def generate_moisture(sensor_id, t_hour):
-    """Generate soil moisture with irrigation cycles"""
-    base_cycle = 0.4 + 0.3 * math.sin(2 * math.pi * t_hour / 168)  # Weekly cycle
-    daily_variation = 0.1 * math.sin(2 * math.pi * t_hour / 24)
-    sensor_offset = (hash(sensor_id) % 100) / 1000
-    moisture = base_cycle + daily_variation + sensor_offset
-    return max(0.1, min(0.9, moisture))
+    """Generate soil moisture with realistic watering cycles using exponential decay"""
+    # Watering cycle parameters (customized per sensor)
+    sensor_hash = hash(sensor_id) % 1000
+    period = 168 + (sensor_hash % 48)  # 7±2 day watering cycles
+    tau = 60 + (sensor_hash % 40)      # Decay rate variation
+    amplitude = 0.8 + (sensor_hash % 100) / 500  # Peak moisture level
+    
+    # Phase within watering cycle [0, period)
+    phase = t_hour % period
+    
+    # Exponential decay from peak moisture after watering
+    base_moisture = amplitude * math.exp(-phase / tau)
+    
+    # Add small daily variation (evaporation patterns)
+    daily_variation = 0.05 * math.sin(2 * math.pi * t_hour / 24)
+    
+    # Sensor-specific offset for calibration differences
+    sensor_offset = (sensor_hash % 50) / 1000
+    
+    moisture = base_moisture + daily_variation + sensor_offset
+    
+    # Ensure realistic bounds (soil never completely dry or oversaturated)
+    return max(0.15, min(0.9, moisture))
 
 
 class MessageProducer:
