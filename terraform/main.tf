@@ -86,7 +86,7 @@ resource "google_pubsub_topic" "sensor_data" {
 
 # BigQuery dataset
 resource "google_bigquery_dataset" "pipeline" {
-  dataset_id = "${replace(local.name_prefix, "-", "_")}_pipeline"
+  dataset_id = "iot_pipeline"
   location   = "US"
   
   depends_on = [time_sleep.wait_for_apis]
@@ -95,7 +95,7 @@ resource "google_bigquery_dataset" "pipeline" {
 # BigQuery table for raw sensor data
 resource "google_bigquery_table" "sensor_readings" {
   dataset_id = google_bigquery_dataset.pipeline.dataset_id
-  table_id   = "sensor_readings"
+  table_id   = "raw_sensor_readings"
   
   schema = jsonencode([
     {
@@ -104,17 +104,17 @@ resource "google_bigquery_table" "sensor_readings" {
       mode = "REQUIRED"
     },
     {
-      name = "timestamp"
+      name = "event_time"
       type = "TIMESTAMP"
       mode = "REQUIRED"
     },
     {
-      name = "temperature"
+      name = "temperature_c"
       type = "FLOAT64"
       mode = "NULLABLE"
     },
     {
-      name = "humidity"
+      name = "humidity_pct"
       type = "FLOAT64"
       mode = "NULLABLE"
     },
@@ -128,7 +128,7 @@ resource "google_bigquery_table" "sensor_readings" {
   # Partition by date for performance
   time_partitioning {
     type  = "DAY"
-    field = "timestamp"
+    field = "event_time"
   }
   deletion_protection = false
 }

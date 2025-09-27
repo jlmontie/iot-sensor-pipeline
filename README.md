@@ -10,7 +10,7 @@ Production-ready data engineering project demonstrating modern cloud-native arch
 
 ## Business Impact
 
-**Problem**: Traditional agricultural monitoring relies on manual inspections, leading to late detection of crop stress, inefficient irrigation scheduling, and reactive farm management with higher operational costs.
+**Problem**: Traditional plant monitoring relies on manual inspections, leading to late detection of plant stress, inefficient watering scheduling, and reactive management with higher operational costs.
 
 **Solution**: Real-time IoT sensor monitoring with automated anomaly detection that enables:
 - Proactive maintenance through early warning systems
@@ -101,7 +101,7 @@ DASHBOARD_MODE=cloud GCP_PROJECT_ID=your-project-id python3 scripts/frontload-cl
 # 5. Start applications with explicit mode
 # Data generator
 python3 src/generator/simulate_stream.py cloud --project-id your-project-id
-# Dashboard (export variables since streamlit doesn't take arguments)
+# Dashboard (export variables since Streamlit doesn't handle command arguments)
 export DASHBOARD_MODE=cloud 
 export GCP_PROJECT_ID=your-project-id 
 streamlit run src/dashboard/app.py
@@ -144,12 +144,15 @@ Run locally for development and testing:
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 2. One-command setup (includes 6 weeks of historical data!)
+# 2. One-command setup (includes 6 weeks of historical data)
 ./scripts/run-local.sh
 
-       # 3. Start applications
-       python3 src/generator/simulate_stream.py local  # Data generator
-       streamlit run src/dashboard/app.py             # Dashboard (defaults to local)
+# 3. Start applications
+# Data generator
+python3 src/generator/simulate_stream.py local
+# Dashboard (export variables since Streamlit doesn't handle command arguments)
+export DASHBOARD_MODE=local
+streamlit run src/dashboard/app.py             
 
 # 4. Enable Airflow pipeline (optional)
 # Visit http://localhost:8080 (username: airflow, password: airflow) 

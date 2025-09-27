@@ -27,8 +27,8 @@ def process_sensor_data(cloud_event):
         logger.info(f"Received sensor data: {sensor_data}")
 
         # Get environment variables
-        dataset_id = os.environ.get("BQ_DATASET", "iot_demo_dev_pipeline")
-        table_id = os.environ.get("BQ_TABLE", "sensor_readings")
+        dataset_id = os.environ.get("BQ_DATASET", "iot_pipeline")
+        table_id = os.environ.get("BQ_TABLE", "raw_sensor_readings")
         project_id = os.environ.get("GCP_PROJECT_ID")
 
         logger.info(
@@ -61,9 +61,9 @@ def process_sensor_data(cloud_event):
         rows_to_insert = [
             {
                 "sensor_id": sensor_data.get("sensor_id"),
-                "timestamp": sensor_data.get("timestamp"),
-                "temperature": sensor_data.get("temperature"),
-                "humidity": sensor_data.get("humidity"),
+                "event_time": sensor_data.get("timestamp"),
+                "temperature_c": sensor_data.get("temperature_c", sensor_data.get("temperature")),
+                "humidity_pct": sensor_data.get("humidity_pct", sensor_data.get("humidity")),
                 "soil_moisture": sensor_data.get("soil_moisture"),
             }
         ]

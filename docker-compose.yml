@@ -44,17 +44,20 @@ services:
       AIRFLOW__CORE__LOAD_EXAMPLES: ${AIRFLOW__CORE__LOAD_EXAMPLES:-False}
       AIRFLOW__DATABASE__SQL_ALCHEMY_CONN: postgresql+psycopg2://postgres:postgres@postgres:5432/iot
       AIRFLOW__CORE__EXECUTOR: LocalExecutor
-      _PIP_ADDITIONAL_REQUIREMENTS: confluent-kafka>=2.3.0 psycopg2-binary==2.9.9 dbt-postgres==1.7.10
       # Kafka configuration
       KAFKA_BROKER: kafka:9092
       KAFKA_TOPIC: sensor.readings
-    user: "0:0"  # Run as root to avoid permission issues
-    entrypoint: >
-      bash -c "
-        airflow db init &&
-        airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true &&
+    user: "0:0"  # Run as root to handle permissions, but switch to airflow user for pip
+    entrypoint: 
+      - bash
+      - -c
+      - |
+        # Install additional Python packages as airflow user (Airflow's pip requires this)
+        su airflow -c "pip install confluent-kafka>=2.3.0 psycopg2-binary==2.9.9 dbt-postgres==1.7.10"
+        # Initialize Airflow (as root for database permissions)
+        airflow db init
+        airflow users create --username airflow --password airflow --firstname Admin --lastname User --role Admin --email admin@example.com || true
         exec airflow standalone
-      "
     volumes:
       - ./airflow/dags:/opt/airflow/dags
       - ./airflow/logs:/opt/airflow/logs

@@ -1,8 +1,8 @@
-# 🏗️ Terraform Infrastructure
+# Terraform Infrastructure
 
-**Minimal, demo-friendly IoT pipeline infrastructure for Google Cloud**
+**Minimal IoT pipeline infrastructure for Google Cloud**
 
-## 🎯 **What's Deployed**
+## **What's Deployed**
 
 This Terraform configuration creates a streamlined IoT data pipeline with **13 resources**:
 
@@ -17,7 +17,7 @@ This Terraform configuration creates a streamlined IoT data pipeline with **13 r
 - **Storage Bucket**: Function source code storage
 - **Google Cloud APIs**: Required services (Pub/Sub, BigQuery, etc.)
 
-## 🚀 **Quick Deploy**
+## **Quick Deploy**
 
 ```bash
 # 1. Configure your project
@@ -34,7 +34,7 @@ gcloud pubsub topics publish iot-demo-dev-sensor-data \
   --message='{"sensor_id":"test","temperature":23.5,"timestamp":"2025-09-26T18:00:00Z"}'
 ```
 
-## ⚙️ **Configuration**
+## **Configuration**
 
 ### **Required Variables**
 ```hcl
@@ -49,7 +49,7 @@ environment  = "dev"          # Default: "dev"
 region      = "us-central1"   # Default: "us-central1"
 ```
 
-## 📋 **Resources Created**
+## **Resources Created**
 
 | Resource Type | Count | Purpose |
 |---------------|-------|---------|
@@ -65,7 +65,7 @@ region      = "us-central1"   # Default: "us-central1"
 
 **Total: 13 resources** (vs 42 in the complex version)
 
-## 🎨 **Design Principles**
+## **Design Principles**
 
 - **Simplicity**: Easy to understand and explain
 - **Standards**: Uses standard Terraform workflow
@@ -73,7 +73,7 @@ region      = "us-central1"   # Default: "us-central1"
 - **Performance**: BigQuery table partitioned by timestamp
 - **Cost-Effective**: Serverless components with auto-scaling
 
-## 🔍 **After Deployment**
+## **After Deployment**
 
 Check the outputs for next steps:
 ```bash
@@ -85,8 +85,6 @@ The pipeline will be ready to:
 2. Process data with Cloud Function
 3. Store data in BigQuery
 4. Display results via Cloud Run dashboard
-
-Perfect for demonstrating cloud architecture skills! 🚀
 
 ## Cleanup
 

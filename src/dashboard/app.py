@@ -17,8 +17,8 @@ if CLOUD_MODE:
             "Run with: DASHBOARD_MODE=cloud GCP_PROJECT_ID=your-project streamlit run src/dashboard/app.py"
         )
         st.stop()
-    BQ_DATASET = os.getenv("BQ_DATASET", "iot_demo_dev_pipeline")
-    BQ_TABLE = os.getenv("BQ_TABLE", "sensor_readings")
+    BQ_DATASET = os.getenv("BQ_DATASET", "iot_pipeline")
+    BQ_TABLE = os.getenv("BQ_TABLE", "raw_sensor_readings")
 else:
     DB_USER = os.getenv("POSTGRES_USER", "postgres")
     DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
@@ -89,14 +89,13 @@ def get_sensor_data():
         query = f"""
         SELECT 
             sensor_id,
-            timestamp,
-            temperature,
-            humidity,
+            event_time as timestamp,
+            temperature_c as temperature,
+            humidity_pct as humidity,
             soil_moisture
         FROM `{PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`
-        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        ORDER BY timestamp DESC
-        LIMIT 1000
+        ORDER BY event_time DESC
+        LIMIT 3000
         """
     else:
         query = """
@@ -107,9 +106,8 @@ def get_sensor_data():
             humidity_pct as humidity,
             soil_moisture
         FROM raw_sensor_readings
-        WHERE event_time >= NOW() - INTERVAL '24 hours'
         ORDER BY event_time DESC
-        LIMIT 1000
+        LIMIT 3000
         """
 
     return fetch_data(query)
@@ -121,14 +119,13 @@ def get_aggregated_data():
         query = f"""
         SELECT 
             sensor_id,
-            TIMESTAMP_TRUNC(timestamp, HOUR) as hour,
-            AVG(temperature) as avg_temperature,
-            AVG(humidity) as avg_humidity,
+            TIMESTAMP_TRUNC(event_time, HOUR) as hour,
+            AVG(temperature_c) as avg_temperature,
+            AVG(humidity_pct) as avg_humidity,
             AVG(soil_moisture) as avg_soil_moisture,
             COUNT(*) as reading_count
         FROM `{PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`
-        WHERE timestamp >= TIMESTAMP_SUB(CURRENT_TIMESTAMP(), INTERVAL 24 HOUR)
-        GROUP BY sensor_id, TIMESTAMP_TRUNC(timestamp, HOUR)
+        GROUP BY sensor_id, TIMESTAMP_TRUNC(event_time, HOUR)
         ORDER BY hour DESC
         """
     else:
@@ -141,7 +138,6 @@ def get_aggregated_data():
             AVG(soil_moisture) as avg_soil_moisture,
             COUNT(*) as reading_count
         FROM raw_sensor_readings
-        WHERE event_time >= NOW() - INTERVAL '24 hours'
         GROUP BY sensor_id, DATE_TRUNC('hour', event_time)
         ORDER BY hour DESC
         """
@@ -178,6 +174,31 @@ try:
         latest_moisture = df_raw["soil_moisture"].iloc[0] if not df_raw.empty else 0
         st.metric("Latest Soil Moisture", f"{latest_moisture:.3f}")
 
+    # Soil moisture with anomaly detection
+    st.subheader("Soil Moisture Analysis")
+    if not df_raw.empty:
+        # Simple anomaly detection (values below 0.2 are concerning)
+        # Create anomaly detection (boolean for alerts, numeric for visualization)
+        df_raw["anomaly"] = df_raw["soil_moisture"] < 0.2
+        df_raw["anomaly_size"] = (
+            df_raw["anomaly"].astype(int) * 10 + 5
+        )  # 15 for anomalies, 5 for normal
+
+        fig_moisture = px.line(
+            df_raw,
+            x="timestamp",
+            y="soil_moisture",
+            color="sensor_id",
+            # size="anomaly_size",
+            title="Soil Moisture Levels (Large points = Low moisture alerts)",
+        )
+        st.plotly_chart(fig_moisture, use_container_width=True)
+
+        # Alert for low moisture
+        low_moisture = df_raw[df_raw["anomaly"]]["sensor_id"].unique()
+        if len(low_moisture) > 0:
+            st.error(f"Low soil moisture alert for sensors: {', '.join(low_moisture)}")
+    
     # Charts
     col1, col2 = st.columns(2)
 
@@ -204,32 +225,7 @@ try:
                 title="Average Humidity by Hour",
             )
             st.plotly_chart(fig_humidity, use_container_width=True)
-
-    # Soil moisture with anomaly detection
-    st.subheader("Soil Moisture Analysis")
-    if not df_raw.empty:
-        # Simple anomaly detection (values below 0.2 are concerning)
-        # Create anomaly detection (boolean for alerts, numeric for visualization)
-        df_raw["anomaly"] = df_raw["soil_moisture"] < 0.2
-        df_raw["anomaly_size"] = (
-            df_raw["anomaly"].astype(int) * 10 + 5
-        )  # 15 for anomalies, 5 for normal
-
-        fig_moisture = px.scatter(
-            df_raw,
-            x="timestamp",
-            y="soil_moisture",
-            color="sensor_id",
-            # size="anomaly_size",
-            title="Soil Moisture Levels (Large points = Low moisture alerts)",
-        )
-        st.plotly_chart(fig_moisture, use_container_width=True)
-
-        # Alert for low moisture
-        low_moisture = df_raw[df_raw["anomaly"]]["sensor_id"].unique()
-        if len(low_moisture) > 0:
-            st.error(f"Low soil moisture alert for sensors: {', '.join(low_moisture)}")
-
+    
     # Recent readings table
     st.subheader("Recent Readings")
     st.dataframe(df_raw.head(20), use_container_width=True)
@@ -237,7 +233,7 @@ try:
     # Environment info
     st.sidebar.info(f"Running in {'Cloud' if CLOUD_MODE else 'Local'} mode")
     if CLOUD_MODE:
-        st.sidebar.info(f"Dataset: {os.getenv('BQ_DATASET', 'iot_demo_dev_pipeline')}")
+        st.sidebar.info(f"Dataset: {os.getenv('BQ_DATASET', 'iot_pipeline')}")
 
 except Exception as e:
     st.error(f"Error loading dashboard: {str(e)}")

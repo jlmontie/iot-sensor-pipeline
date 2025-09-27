@@ -45,9 +45,9 @@ def frontload_historical_data(client, table_ref, sensors, num_points=1000):
             # Add to batch
             rows_to_insert.append({
                 "sensor_id": sensor_id,
-                "timestamp": point_time.isoformat(),
-                "temperature": reading['temperature'],
-                "humidity": reading['humidity'],
+                "event_time": point_time.isoformat(),
+                "temperature_c": reading['temperature'],
+                "humidity_pct": reading['humidity'],
                 "soil_moisture": reading['soil_moisture'],
             })
         
@@ -78,8 +78,8 @@ def frontload_historical_data(client, table_ref, sensors, num_points=1000):
 def main():
     # Get configuration from environment
     project_id = os.getenv('GCP_PROJECT_ID')
-    dataset_id = os.getenv('BQ_DATASET', 'iot_demo_dev_pipeline')
-    table_id = os.getenv('BQ_TABLE', 'sensor_readings')
+    dataset_id = os.getenv('BQ_DATASET', 'iot_pipeline')
+    table_id = os.getenv('BQ_TABLE', 'raw_sensor_readings')
     
     if not project_id:
         print("Error: GCP_PROJECT_ID environment variable required")

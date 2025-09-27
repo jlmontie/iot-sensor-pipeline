@@ -48,7 +48,7 @@ def generate_moisture(sensor_id, t_hour):
     # Sensor-specific offset for calibration differences
     sensor_offset = (sensor_hash % 50) / 1000
 
-    moisture = base_moisture + daily_variation + sensor_offset
+    moisture = base_moisture + sensor_offset  # optionally add daily_variation--perhaps to sinusoidal
 
     # Ensure realistic bounds (soil never completely dry or oversaturated)
     return max(0.15, min(0.9, moisture))
