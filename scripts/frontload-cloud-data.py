@@ -11,6 +11,7 @@ from datetime import datetime, timezone, timedelta
 from google.cloud import bigquery
 
 # Import shared sensor simulation functions
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.common import generate_sensor_reading
 
 

@@ -6,11 +6,13 @@ Use src/generator/simulate_stream.py for real-time data generation.
 """
 
 import os
+import sys
 import time
 import psycopg2
 from datetime import datetime, timezone, timedelta
 
 # Import shared sensor simulation functions
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from src.common import generate_sensor_reading
 
 # Database connection

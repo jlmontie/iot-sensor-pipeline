@@ -7,6 +7,7 @@ import argparse
 from datetime import datetime, timezone, timedelta
 
 # Import shared sensor simulation functions
+sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 from src.common import generate_sensor_reading
 
 
