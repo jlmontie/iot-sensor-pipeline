@@ -39,13 +39,6 @@ echo "Waiting for Airflow to install confluent-kafka dependency..."
 echo "This may take 30-60 seconds on first run..."
 sleep 45
 
-echo "Starting real-time data generator..."
-python3 src/generator/simulate_stream.py local &
-DATA_GEN_PID=$!
-
-echo "Waiting for services to be ready..."
-sleep 10
-
 echo ""
 echo "=== LOCAL ENVIRONMENT READY ==="
 echo ""
