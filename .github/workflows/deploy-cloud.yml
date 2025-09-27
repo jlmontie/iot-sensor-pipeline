@@ -25,17 +25,16 @@ jobs:
     - name: Install dependencies
       run: |
         pip install flake8 pytest black
-        pip install -r cloud/dashboard/requirements.txt
-        pip install -r cloud/generator/requirements.txt
-        pip install -r cloud/functions/ingest_sensor_data/requirements.txt
+        pip install -r src/requirements.txt
+        pip install -r cloud/functions/requirements.txt
     
     - name: Lint with flake8
       run: |
-        flake8 cloud/ --count --select=E9,F63,F7,F82 --show-source --statistics
-        flake8 cloud/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+        flake8 src/ cloud/functions/ --count --select=E9,F63,F7,F82 --show-source --statistics
+        flake8 src/ cloud/functions/ --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
     
     - name: Format check with black
-      run: black --check cloud/
+      run: black --check src/ cloud/functions/
   
   deploy-infrastructure:
     if: github.ref == 'refs/heads/cloud-infrastructure'
@@ -63,73 +62,28 @@ jobs:
       with:
         terraform_version: 1.5.0
     
-    - name: 'Create Terraform variables'
+    - name: 'Deploy with our deployment script'
       run: |
+        # Create terraform.tfvars
         cd terraform
         cat > terraform.tfvars << EOF
         project_id = "$PROJECT_ID"
-        notification_email = "${{ secrets.NOTIFICATION_EMAIL }}"
-        billing_account = "${{ secrets.BILLING_ACCOUNT }}"
-        environment = "dev"
+        region = "us-central1"
         EOF
-    
-    - name: 'Terraform Init'
-      run: |
-        cd terraform
-        terraform init
-    
-    - name: 'Terraform Plan'
-      run: |
-        cd terraform
-        terraform plan -out=tfplan
-    
-    - name: 'Terraform Apply'
-      run: |
-        cd terraform
-        terraform apply -auto-approve tfplan
-    
-    - name: 'Configure Docker for Artifact Registry'
-      run: gcloud auth configure-docker $GAR_LOCATION-docker.pkg.dev
-    
-    - name: 'Get Terraform Outputs'
-      id: terraform-outputs
-      run: |
-        cd terraform
-        echo "dashboard_service_name=$(terraform output -raw dashboard_service_name)" >> $GITHUB_OUTPUT
-        echo "data_generator_job_name=$(terraform output -raw data_generator_job_name)" >> $GITHUB_OUTPUT
-        echo "docker_repository=$(terraform output -raw docker_repository)" >> $GITHUB_OUTPUT
-    
-    - name: 'Build and push dashboard image'
-      run: |
-        docker build -t ${{ steps.terraform-outputs.outputs.docker_repository }}/dashboard:$GITHUB_SHA cloud/dashboard/
-        docker push ${{ steps.terraform-outputs.outputs.docker_repository }}/dashboard:$GITHUB_SHA
-    
-    - name: 'Build and push generator image'
-      run: |
-        docker build -t ${{ steps.terraform-outputs.outputs.docker_repository }}/generator:$GITHUB_SHA cloud/generator/
-        docker push ${{ steps.terraform-outputs.outputs.docker_repository }}/generator:$GITHUB_SHA
-    
-    - name: 'Deploy to Cloud Run'
-      run: |
-        gcloud run deploy ${{ steps.terraform-outputs.outputs.dashboard_service_name }} \
-          --image ${{ steps.terraform-outputs.outputs.docker_repository }}/dashboard:$GITHUB_SHA \
-          --region us-central1 \
-          --platform managed
-    
-    - name: 'Update Cloud Run Job'
-      run: |
-        gcloud run jobs replace ${{ steps.terraform-outputs.outputs.data_generator_job_name }} \
-          --image ${{ steps.terraform-outputs.outputs.docker_repository }}/generator:$GITHUB_SHA \
-          --region us-central1
+        cd ..
+        
+        # Run deployment
+        export GCP_PROJECT_ID="$PROJECT_ID"
+        ./scripts/run-cloud.sh
     
     - name: 'Display Deployment Info'
       run: |
         cd terraform
-        echo "🎉 Deployment Complete!"
+        echo "Deployment Complete!"
         echo ""
-        echo "📊 Dashboard URL: $(terraform output -raw dashboard_url)"
-        echo "🤖 Data Generator: $(terraform output -raw data_generator_job_name)"
-        echo "📦 Docker Repository: $(terraform output -raw docker_repository)"
+        echo "Dashboard URL: $(terraform output -raw dashboard_url)"
+        echo "Function Name: $(terraform output -raw function_name)"
+        echo "BigQuery Dataset: $(terraform output -raw bigquery_dataset)"
         echo ""
-        echo "🚀 To start data generation:"
-        echo "gcloud run jobs execute $(terraform output -raw data_generator_job_name) --region=us-central1"
+        echo "Next steps from terraform output:"
+        terraform output -raw next_steps
