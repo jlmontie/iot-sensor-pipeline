@@ -4,7 +4,6 @@ Temporary script to populate PostgreSQL with realistic sensor data
 while we fix the Airflow DAG issue.
 """
 
-import os
 import time
 import random
 import math
@@ -61,30 +60,23 @@ def jitter(value, noise_level=0.05):
     return value + random.gauss(0, noise_level * abs(value))
 
 def frontload_historical_data(conn, cursor, sensors, num_points=1000):
-    """Insert historical data points for immediate dashboard visualization
+    """Insert historical data points for immediate dashboard visualization"""
+    print(f"Frontloading {num_points} historical data points...")
     
-    Args:
-        num_points: Number of hourly readings to generate (default 1000 = ~6 weeks)
-    """
-    weeks = num_points / 24 / 7  # Convert points to weeks
-    print(f"Frontloading {num_points} hourly historical data points (~{weeks:.1f} weeks)...")
-    
-    # Generate hourly data going back in time (6+ weeks)
+    # Generate data going back in time (last 24 hours)
     current_time = datetime.now(timezone.utc)
-    time_interval = timedelta(hours=1)  # Hourly readings
+    time_interval = timedelta(minutes=1.44)  # ~1000 points over 24 hours
     
     count = 0
     for i in range(num_points):
-        # Calculate time going backwards (hourly intervals)
+        # Calculate time going backwards
         point_time = current_time - (time_interval * (num_points - i))
-        
-        # Calculate hours from start of simulation for pattern generation
-        hours_from_start = (point_time.timestamp() - (current_time - timedelta(hours=num_points)).timestamp()) / 3600
+        t_hour = (point_time.timestamp() - current_time.timestamp()) / 3600 + 24  # Hours from 24h ago
         
         for sensor_id in sensors:
-            temp = generate_temperature(sensor_id, hours_from_start)
-            humidity = generate_humidity(sensor_id, hours_from_start)
-            moisture = generate_moisture(sensor_id, hours_from_start)
+            temp = generate_temperature(sensor_id, t_hour)
+            humidity = generate_humidity(sensor_id, t_hour)
+            moisture = generate_moisture(sensor_id, t_hour)
             
             # Add noise
             temp = jitter(temp, 0.1)
@@ -101,31 +93,21 @@ def frontload_historical_data(conn, cursor, sensors, num_points=1000):
             
             count += 1
         
-        # Commit every 50 time points (50 hours worth of data) for performance
+        # Commit every 50 points for performance
         if i % 50 == 0:
             conn.commit()
-            days_back = (num_points - i) / 24
-            print(f"Inserted {count} historical readings... ({days_back:.1f} days back)")
+            print(f"Inserted {count} historical readings...")
     
     conn.commit()
-    print(f"Frontloaded {count} historical data points over {weeks:.1f} weeks")
+    print(f"✅ Frontloaded {count} historical data points")
     return count
 
 def main():
-    # Detect environment mode (cloud uses fewer sensors for cost optimization)
-    cloud_mode = os.getenv('DASHBOARD_MODE', '').lower() == 'cloud' or os.getenv('CLOUD_MODE', '').lower() == 'true'
-    
-    if cloud_mode:
-        sensors = [f"SENSOR-{i:03d}" for i in range(1, 4)]  # 3 sensors for cloud
-        env_name = "Cloud"
-    else:
-        sensors = [f"SENSOR-{i:03d}" for i in range(1, 6)]  # 5 sensors for local
-        env_name = "Local"
-    
-    print(f"🚀 Starting {env_name} data population with frontloading...")
-    print(f"Environment: {env_name} mode ({len(sensors)} sensors)")
-    print("This will first insert 1000 hourly historical points (~6 weeks), then continue with real-time data")
+    print("🚀 Starting PostgreSQL data population with frontloading...")
+    print("This will first insert 1000 historical points, then continue with real-time data")
     print("Press Ctrl+C to stop")
+    
+    sensors = [f"SENSOR-{i:03d}" for i in range(1, 6)]  # 5 sensors
     
     try:
         conn = psycopg2.connect(**DB_CONFIG)
@@ -139,8 +121,8 @@ def main():
         # Frontload historical data
         historical_count = frontload_historical_data(conn, cursor, sensors, 1000)
         
-        print(f"\nHistorical data ready! Dashboard should now show rich data.")
-        print(f"Starting real-time data generation...")
+        print(f"\n📊 Historical data ready! Dashboard should now show rich data.")
+        print(f"🔄 Starting real-time data generation...")
         
         # Continue with real-time data
         t0 = time.time()
@@ -172,14 +154,14 @@ def main():
             
             conn.commit()
             total_count = historical_count + realtime_count
-            print(f"Total: {total_count} readings ({historical_count} historical + {realtime_count} realtime)")
+            print(f"📈 Total: {total_count} readings ({historical_count} historical + {realtime_count} realtime)")
             time.sleep(5)  # Insert every 5 seconds
             
     except KeyboardInterrupt:
         total_count = historical_count + realtime_count if 'historical_count' in locals() else 0
-        print(f"\nStopping... Total inserted: {total_count} readings")
+        print(f"\n🛑 Stopping... Total inserted: {total_count} readings")
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"❌ Error: {e}")
     finally:
         if 'conn' in locals():
             conn.close()

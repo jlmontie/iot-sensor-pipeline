@@ -95,7 +95,10 @@ cd ..
 # 3. One-command deployment (includes function source creation)
 ./scripts/run-cloud.sh
 
-# 4. Start applications with explicit mode
+# 4. Frontload BigQuery with 6 weeks of historical data (3 sensors)
+DASHBOARD_MODE=cloud GCP_PROJECT_ID=your-project-id python3 scripts/frontload-cloud-data.py
+
+# 5. Start applications with explicit mode
 # Data generator
 python3 src/generator/simulate_stream.py cloud --project-id your-project-id
 # Dashboard (export variables since streamlit doesn't take arguments)
@@ -141,7 +144,7 @@ Run locally for development and testing:
 python3 -m venv .venv
 source .venv/bin/activate
 
-# 2. One-command setup
+# 2. One-command setup (includes 6 weeks of historical data!)
 ./scripts/run-local.sh
 
        # 3. Start applications

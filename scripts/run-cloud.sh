@@ -77,7 +77,7 @@ if ! terraform apply -auto-approve; then
 fi
 
 # Upload function source to the bucket created by Terraform
-echo "📤 Uploading function source to GCS..."
+echo "Uploading function source to GCS..."
 if terraform output function_source_bucket > /dev/null 2>&1; then
     BUCKET_NAME=$(terraform output -raw function_source_bucket)
     echo "Using function source bucket: $BUCKET_NAME"
@@ -85,7 +85,7 @@ if terraform output function_source_bucket > /dev/null 2>&1; then
     echo "Function source uploaded successfully"
     
     # Restore the original files and apply Phase 2
-    echo "🔄 Applying Phase 2: Creating Cloud Function..."
+    echo "Applying Phase 2: Creating Cloud Function..."
     mv main.tf.backup main.tf
     mv outputs.tf.backup outputs.tf
     rm -f main.tf.tmp outputs.tf.tmp  # Clean up sed backup files
@@ -107,13 +107,17 @@ fi
 cd ..
 
 # Install dependencies
-echo "📚 Installing Python dependencies..."
+echo "Installing Python dependencies..."
 pip install -r src/requirements.txt
 
 echo "Cloud environment ready!"
 echo ""
 echo "Next steps:"
-echo "1. Start data generator:    python3 src/generator/simulate_stream.py cloud --project-id $GCP_PROJECT_ID"
-echo "2. Launch dashboard:        DASHBOARD_MODE=cloud GCP_PROJECT_ID=$GCP_PROJECT_ID streamlit run src/dashboard/app.py"
-echo "3. Test with Pub/Sub:       gcloud pubsub topics publish $PUBSUB_TOPIC --message='{\"sensor_id\":\"test\",\"temperature\":23.5}'"
+echo "1. Frontload historical data: DASHBOARD_MODE=cloud GCP_PROJECT_ID=$GCP_PROJECT_ID python3 scripts/frontload-cloud-data.py"
+echo "2. Start data generator:      python3 src/generator/simulate_stream.py cloud --project-id $GCP_PROJECT_ID"
+echo "3. Launch dashboard:          DASHBOARD_MODE=cloud GCP_PROJECT_ID=$GCP_PROJECT_ID streamlit run src/dashboard/app.py"
+echo "4. Test with Pub/Sub:         gcloud pubsub topics publish $PUBSUB_TOPIC --message='{\"sensor_id\":\"test\",\"temperature\":23.5}'"
+echo ""
+echo "💡 The frontloading step populates BigQuery with 6 weeks of historical data (3 sensors)"
+echo "   so your dashboard shows rich visualizations immediately!"
 echo ""
