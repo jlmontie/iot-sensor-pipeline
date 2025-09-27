@@ -1,0 +1,22 @@
+# Core dependencies
+numpy>=1.26.0
+pandas==2.2.2
+
+# Dashboard dependencies
+streamlit==1.28.1
+plotly==5.17.0
+
+# Local database support
+psycopg2-binary==2.9.9
+sqlalchemy==2.0.31
+
+# Cloud dependencies (installed when CLOUD_MODE=true)
+google-cloud-bigquery>=3.13.0
+google-cloud-pubsub>=2.18.0
+db-dtypes>=1.0.0
+
+# Message streaming
+confluent-kafka>=2.3.0
+
+# Utilities
+scipy>=1.11.0

@@ -8,4 +8,4 @@ SELECT
   AVG(humidity_pct) AS avg_humidity,
   AVG(soil_moisture) AS avg_moisture
 FROM base
-GROUP BY sensor_id, date_trunc('hour', event_time);
+GROUP BY sensor_id, date_trunc('hour', event_time)

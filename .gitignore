@@ -1,1 +1,60 @@
-.venv
+# === Python Virtual Environments ===
+.venv/
+venv/
+env/
+ENV/
+
+# === Bytecode and Caches ===
+__pycache__/
+*.py[cod]
+*.pyo
+
+# === Editor and OS Files ===
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# === Environment and Secrets ===
+.env
+.env.*
+*.secret
+*.key
+*.pem
+terraform.tfvars
+*.tfplan
+
+# === Terraform State and Local Files ===
+terraform.tfstate
+terraform.tfstate.backup
+terraform.tfstate.*.backup
+.terraform/
+.terraform.lock.hcl
+
+# === Logs and Outputs ===
+*.log
+*.out
+
+# === Personal and Local Files ===
+*.local*
+*.backup
+
+# === Build and Distribution ===
+dist/
+build/
+*.egg-info/
+
+# === Node and JS Artifacts ===
+node_modules/
+npm-debug.log
+
+# === dbt Artifacts ===
+dbt/logs/
+dbt/target/
+dbt/dbt_packages/
+dbt/.user.yml
+dbt/package-lock.yml
+
+# === Miscellaneous ===
+*.swp
+*.swo

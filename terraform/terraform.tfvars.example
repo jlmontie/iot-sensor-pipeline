@@ -1,0 +1,10 @@
+# Minimal Configuration - IoT Pipeline Demo
+# Copy this to terraform.tfvars and customize
+
+# Required: Your Google Cloud Project ID
+project_id = "your-project-id-here"
+
+# Optional: Customize naming and location
+project_name = "iot-demo"
+environment  = "dev"
+region      = "us-central1"
