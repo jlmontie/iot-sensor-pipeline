@@ -76,6 +76,9 @@ flowchart TD
 
 Deploy to Google Cloud with minimal, demo-friendly architecture:
 
+#### Standard Deployment (Manual Testing)
+For development and testing:
+
 ```bash
 # 1. Set up environment
 python3 -m venv .venv
@@ -101,8 +104,33 @@ export GCP_PROJECT_ID=your-project-id
 streamlit run src/dashboard/app.py
 ```
 
+#### Live Demo Deployment (Always-On Showcase)
+For employer demonstrations and portfolio showcase:
+
+```bash
+# 1. Set up environment (same as above)
+python3 -m venv .venv && source .venv/bin/activate
+pip install -r src/requirements.txt
+
+# 2. Configure GCP and deploy live demo
+export GCP_PROJECT_ID=your-project-id
+gcloud auth login
+gcloud config set project $GCP_PROJECT_ID
+
+# 3. Deploy always-on live demo
+./scripts/deploy-live-demo.sh
+```
+
+**Live Demo Features**:
+- Always-available dashboard URL for employers
+- Automated data generation every hour via Cloud Scheduler
+- Real-time charts, anomaly detection, and interactive analytics
+- Professional, production-ready architecture
+
 **Benefits**: Serverless, auto-scaling, monitoring, cost controls, CI/CD
-**Cost**: ~$5-10/month with cost-optimized demo settings (3 sensors, 1-minute intervals)
+**Cost**: 
+- Standard: ~$5-10/month (manual testing)
+- Live Demo: ~$10-15/month (always-on with hourly data generation)
 
 ### Option 2: Local Development
 

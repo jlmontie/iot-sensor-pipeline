@@ -20,6 +20,11 @@ output "dashboard_url" {
   value       = google_cloud_run_v2_service.dashboard.uri
 }
 
+output "dashboard_service_name" {
+  description = "Cloud Run dashboard service name"
+  value       = google_cloud_run_v2_service.dashboard.name
+}
+
 output "function_name" {
   description = "Cloud Function name"
   value       = google_cloudfunctions2_function.ingest_data.name
@@ -35,19 +40,46 @@ output "function_source_bucket" {
   value       = google_storage_bucket.function_source.name
 }
 
+output "scheduler_job_name" {
+  description = "Cloud Scheduler job for automated data generation"
+  value       = google_cloud_scheduler_job.data_generator.name
+}
+
+output "live_demo_info" {
+  description = "Live demo URLs for sharing with employers"
+  value = <<-EOT
+    LIVE DEMO READY FOR EMPLOYERS:
+    
+    Dashboard (always live): ${google_cloud_run_v2_service.dashboard.uri}
+    Data Generator: Runs automatically every hour via Cloud Scheduler
+    BigQuery Console: https://console.cloud.google.com/bigquery?project=${var.project_id}
+    
+    The demo generates realistic IoT sensor data hourly and displays:
+    - Real-time temperature, humidity, and soil moisture readings
+    - Interactive charts and anomaly detection
+    - Historical trends and aggregated data
+    
+    Estimated cost: ~$10-15/month for always-on demo
+  EOT
+}
+
 output "next_steps" {
   description = "What to do after Terraform deployment"
   value = <<-EOT
     Infrastructure deployed successfully!
     
-    Next steps:
-    1. Test the pipeline:
-       gcloud pubsub topics publish ${google_pubsub_topic.sensor_data.name} --message='{"sensor_id":"test","temperature":23.5,"timestamp":"$(date -u +%Y-%m-%dT%H:%M:%SZ)"}'
+    For immediate testing:
+    1. Trigger scheduler manually:
+       gcloud scheduler jobs run ${google_cloud_scheduler_job.data_generator.name} --location=${var.region}
     
     2. Check BigQuery for data:
        https://console.cloud.google.com/bigquery?project=${var.project_id}
     
-    3. View dashboard:
+    3. View live dashboard:
        ${google_cloud_run_v2_service.dashboard.uri}
+    
+    For portfolio sharing:
+    - GitHub: [Your repo URL]
+    - Live Demo: ${google_cloud_run_v2_service.dashboard.uri}
   EOT
 }

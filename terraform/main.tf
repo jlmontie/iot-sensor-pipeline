@@ -38,7 +38,8 @@ resource "google_project_service" "apis" {
     "run.googleapis.com",
     "eventarc.googleapis.com",
     "cloudbuild.googleapis.com",
-    "storage.googleapis.com"
+    "storage.googleapis.com",
+    "cloudscheduler.googleapis.com"
   ])
   
   service = each.value
@@ -183,11 +184,23 @@ resource "google_cloud_run_v2_service" "dashboard" {
     service_account = google_service_account.pipeline_sa.email
     
     containers {
-      image = "gcr.io/cloudrun/hello"  # Placeholder image
+      image = "gcr.io/cloudrun/hello"  # Will be updated by deployment script
       
+      env {
+        name  = "DASHBOARD_MODE"
+        value = "cloud"
+      }
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
+      }
       env {
         name  = "BQ_DATASET"
         value = google_bigquery_dataset.pipeline.dataset_id
+      }
+      env {
+        name  = "BQ_TABLE"
+        value = google_bigquery_table.sensor_readings.table_id
       }
     }
   }
@@ -201,6 +214,62 @@ resource "google_cloud_run_service_iam_member" "dashboard_public" {
   service  = google_cloud_run_v2_service.dashboard.name
   role     = "roles/run.invoker"
   member   = "allUsers"
+}
+
+# Cloud Scheduler for automated data generation
+resource "google_cloud_scheduler_job" "data_generator" {
+  name        = "${local.name_prefix}-data-generator"
+  description = "Generate IoT sensor data every hour for live demo"
+  schedule    = "0 * * * *"  # Every hour
+  time_zone   = "UTC"
+  region      = var.region
+
+  http_target {
+    http_method = "POST"
+    uri         = "https://pubsub.googleapis.com/v1/projects/${var.project_id}/topics/${google_pubsub_topic.sensor_data.name}:publish"
+    
+    headers = {
+      "Content-Type" = "application/json"
+    }
+    
+    body = base64encode(jsonencode({
+      messages = [
+        {
+          data = base64encode(jsonencode({
+            sensor_id = "DEMO-001"
+            timestamp = timestamp()
+            temperature = 22.5
+            humidity = 65.2
+            soil_moisture = 0.45
+          }))
+        },
+        {
+          data = base64encode(jsonencode({
+            sensor_id = "DEMO-002"  
+            timestamp = timestamp()
+            temperature = 24.1
+            humidity = 58.7
+            soil_moisture = 0.38
+          }))
+        },
+        {
+          data = base64encode(jsonencode({
+            sensor_id = "DEMO-003"
+            timestamp = timestamp()
+            temperature = 21.8
+            humidity = 72.1
+            soil_moisture = 0.52
+          }))
+        }
+      ]
+    }))
+    
+    oauth_token {
+      service_account_email = google_service_account.pipeline_sa.email
+    }
+  }
+  
+  depends_on = [time_sleep.wait_for_apis]
 }
 
 
