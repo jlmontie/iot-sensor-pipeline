@@ -1,7 +1,8 @@
 #!/usr/bin/env python3
 """
-Temporary script to populate PostgreSQL with realistic sensor data
-while we fix the Airflow DAG issue.
+Script to frontload PostgreSQL with 6 weeks of historical sensor data
+for immediate dashboard visualization. Does NOT generate real-time data.
+Use src/generator/simulate_stream.py for real-time data generation.
 """
 
 import os
@@ -122,9 +123,9 @@ def main():
         sensors = [f"SENSOR-{i:03d}" for i in range(1, 6)]  # 5 sensors for local
         env_name = "Local"
     
-    print(f"🚀 Starting {env_name} data population with frontloading...")
+    print(f"Starting {env_name} historical data frontloading...")
     print(f"Environment: {env_name} mode ({len(sensors)} sensors)")
-    print("This will first insert 1000 hourly historical points (~6 weeks), then continue with real-time data")
+    print("This will insert 1000 hourly historical points (~6 weeks) for dashboard visualization")
     print("Press Ctrl+C to stop")
     
     try:
@@ -140,44 +141,12 @@ def main():
         historical_count = frontload_historical_data(conn, cursor, sensors, 1000)
         
         print(f"\nHistorical data ready! Dashboard should now show rich data.")
-        print(f"Starting real-time data generation...")
-        
-        # Continue with real-time data
-        t0 = time.time()
-        realtime_count = 0
-        
-        while True:
-            t = time.time() - t0
-            t_hour = t / 3600  # Convert to hours
-            
-            for sensor_id in sensors:
-                temp = generate_temperature(sensor_id, t_hour)
-                humidity = generate_humidity(sensor_id, t_hour)
-                moisture = generate_moisture(sensor_id, t_hour)
-                
-                # Add noise
-                temp = jitter(temp, 0.1)
-                humidity = jitter(humidity, 0.05)
-                moisture = jitter(moisture, 0.03)
-                
-                # Insert into database
-                cursor.execute("""
-                    INSERT INTO raw_sensor_readings 
-                    (sensor_id, event_time, temperature_c, humidity_pct, soil_moisture)
-                    VALUES (%s, %s, %s, %s, %s)
-                """, (sensor_id, datetime.now(timezone.utc), 
-                      round(temp, 2), round(humidity, 1), round(moisture, 3)))
-                
-                realtime_count += 1
-            
-            conn.commit()
-            total_count = historical_count + realtime_count
-            print(f"Total: {total_count} readings ({historical_count} historical + {realtime_count} realtime)")
-            time.sleep(5)  # Insert every 5 seconds
+        print(f"✅ Frontloading complete. Use src/generator/simulate_stream.py for real-time data.")
+        print(f"💡 Run: python3 src/generator/simulate_stream.py local")
             
     except KeyboardInterrupt:
-        total_count = historical_count + realtime_count if 'historical_count' in locals() else 0
-        print(f"\nStopping... Total inserted: {total_count} readings")
+        historical_count = historical_count if 'historical_count' in locals() else 0
+        print(f"\nStopped. Inserted: {historical_count} historical readings")
     except Exception as e:
         print(f"Error: {e}")
     finally:

@@ -33,28 +33,26 @@ pip install -r src/requirements.txt
 echo "Local environment ready!"
 echo ""
 echo "Frontloading dashboard with 1000 historical data points..."
-python3 scripts/frontload-dashboard-data.py &
-FRONTLOAD_PID=$!
+python3 scripts/frontload-dashboard-data.py
 
-echo "Starting data generator..."
+echo "Starting real-time data generator..."
 python3 src/generator/simulate_stream.py local &
 DATA_GEN_PID=$!
 
 echo "Waiting for services to be ready..."
-sleep 30
+sleep 10
 
 echo ""
 echo "Local environment ready!"
 echo ""
 echo "Services:"
-echo "1. Data generator:          Running (PID: $DATA_GEN_PID)"
-echo "2. Dashboard data:          Running (PID: $FRONTLOAD_PID) - 1000+ points loaded"
-echo "3. Dashboard:               streamlit run src/dashboard/app.py"
-echo "4. Airflow:                 http://localhost:8080 (airflow/airflow)"
-echo "5. Kafka UI:                http://localhost:8086"
+echo "1. Real-time data generator: Running (PID: $DATA_GEN_PID)"
+echo "2. Dashboard:               streamlit run src/dashboard/app.py"
+echo "3. Airflow:                 http://localhost:8080 (airflow/airflow)"
+echo "4. Kafka UI:                http://localhost:8086"
 echo ""
-echo "To stop data processes:"
-echo "  kill $DATA_GEN_PID $FRONTLOAD_PID"
+echo "To stop data generator:"
+echo "  kill $DATA_GEN_PID"
 echo ""
-echo "Dashboard will show rich historical data immediately!"
+echo "Dashboard shows 6 weeks of historical data + live real-time updates!"
 echo ""
