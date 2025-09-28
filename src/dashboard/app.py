@@ -136,9 +136,9 @@ def main():
     if health_data:
         status = health_data.get("status", "unknown")
         if status == "healthy":
-            st.sidebar.success(f"✅ API Status: {status.upper()}")
+            st.sidebar.success(f"API Status: {status.upper()}")
         else:
-            st.sidebar.warning(f"⚠️ API Status: {status.upper()}")
+            st.sidebar.warning(f"API Status: {status.upper()}")
         
         st.sidebar.metric("Database Connected", "✅" if health_data.get("database_connected") else "❌")
         st.sidebar.metric("Sensors Available", health_data.get("sensors_available", 0))
@@ -264,112 +264,13 @@ def main():
 
     # Get sensors from API
     sensors_data = call_api("/sensors")
-        
-    # Prediction Section
-    st.header("Watering Predictions & Alerts")
-    
-    if sensors_data:
-        # Create tabs for each sensor
-        sensor_ids = [sensor['sensor_id'] for sensor in sensors_data]
-        tabs = st.tabs(sensor_ids)
-        
-        for i, sensor_id in enumerate(sensor_ids):
-            with tabs[i]:
-                # Get prediction for this sensor
-                prediction_data = call_api(f"/sensors/{sensor_id}/predict")
-                
-                if prediction_data:
-                    # Status alert
-                    status = prediction_data.get("status", "Unknown")
-                    current_moisture = prediction_data.get("current_moisture", 0)
-                    
-                    if "CRITICAL" in status:
-                        st.markdown(f"""
-                        <div class="critical-alert">
-                            <h4>CRITICAL ALERT</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    elif "WARNING" in status:
-                        st.markdown(f"""
-                        <div class="warning-alert">
-                            <h4>WARNING</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    else:
-                        st.markdown(f"""
-                        <div class="success-alert">
-                            <h4>STATUS OK</h4>
-                            <p><strong>{sensor_id}</strong>: {status}</p>
-                            <p>Current moisture: <strong>{current_moisture:.3f}</strong></p>
-                        </div>
-                        """, unsafe_allow_html=True)
-                    
-                    # Prediction metrics
-                    col1, col2, col3, col4 = st.columns(4)
-                    
-                    with col1:
-                        st.metric(
-                            "Current Moisture", 
-                            f"{current_moisture:.3f}",
-                            delta=None
-                        )
-                    
-                    with col2:
-                        drying_rate = prediction_data.get("drying_rate_per_hour", 0)
-                        st.metric(
-                            "Drying Rate/Hour", 
-                            f"{drying_rate:.6f}",
-                            delta=f"{'Negative' if drying_rate < 0 else 'Positive'}"
-                        )
-                    
-                    with col3:
-                        accuracy = prediction_data.get("model_accuracy", 0)
-                        st.metric(
-                            "Model Accuracy (R²)", 
-                            f"{accuracy:.3f}",
-                            delta=None
-                        )
-                    
-                    with col4:
-                        samples = prediction_data.get("samples_used", 0)
-                        st.metric(
-                            "Data Points", 
-                            f"{samples:,}",
-                            delta=None
-                        )
-                    
-                    # Prediction dates
-                    st.subheader("Watering Schedule")
-                    
-                    predicted_date = prediction_data.get("predicted_watering_date")
-                    critical_date = prediction_data.get("critical_watering_date")
-                    
-                    if predicted_date:
-                        pred_dt = datetime.fromisoformat(predicted_date.replace('Z', '+00:00'))
-                        hours_until = (pred_dt - datetime.now(pred_dt.tzinfo)).total_seconds() / 3600
-                        st.info(f"**Next watering recommended**: {pred_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until:.1f} hours from now)")
-                    
-                    if critical_date:
-                        crit_dt = datetime.fromisoformat(critical_date.replace('Z', '+00:00'))
-                        hours_until_critical = (crit_dt - datetime.now(crit_dt.tzinfo)).total_seconds() / 3600
-                        st.error(f"**Critical watering deadline**: {crit_dt.strftime('%Y-%m-%d %H:%M')} ({hours_until_critical:.1f} hours from now)")
-                    
-                    if not predicted_date and not critical_date:
-                        st.success("No watering needed in the near future")
-                
-                else:
-                    st.error(f"Failed to get predictions for {sensor_id}")
       
     # Footer
     st.markdown("---")
     st.markdown("**Technical Stack**: FastAPI • Streamlit • PostgreSQL/BigQuery • Plotly • Docker")
     st.markdown(f"**API Endpoint**: `{API_BASE_URL}`")
     
-    time.sleep(30)
+    time.sleep(3600)
     st.rerun()
 
 if __name__ == "__main__":

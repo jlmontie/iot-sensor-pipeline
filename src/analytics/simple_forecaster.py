@@ -103,18 +103,13 @@ class SimpleForecastWater:
         predicted_date = None
         critical_date = None
         
-        if drying_rate > 0:  # Moisture is decreasing
-            # Hours until warning threshold
-            if current_moisture < self.warning_threshold:
-                hours_to_warning = -1 *(current_moisture - self.warning_threshold) / abs(drying_rate)
-                predicted_date = current_time + timedelta(hours=hours_to_warning)
-                logger.info(f"Current moisture < warning threshold. \nHours to warning: {hours_to_warning}\nPredicted date: {predicted_date}\n")
+        hours_to_warning = (current_moisture - self.warning_threshold) / abs(drying_rate)
+        predicted_date = current_time + timedelta(hours=hours_to_warning)
+        logger.info(f"Current moisture < warning threshold. \nHours to warning: {hours_to_warning}\nPredicted date: {predicted_date}\n")
             
-            # Hours until critical threshold
-            if current_moisture < self.critical_threshold:
-                hours_to_critical = -1 * (current_moisture - self.critical_threshold) / abs(drying_rate)
-                critical_date = current_time + timedelta(hours=hours_to_critical)
-                logger.info(f"Current moisture < critical threshold. \nHours to critical: {hours_to_critical}\nCritical date: {critical_date}\n")
+        hours_to_critical = (current_moisture - self.critical_threshold) / abs(drying_rate)
+        critical_date = current_time + timedelta(hours=hours_to_critical)
+        logger.info(f"Current moisture < critical threshold. \nHours to critical: {hours_to_critical}\nCritical date: {critical_date}\n")
         
         logger.info(f"Analysis info: {analysis_info}")
         logger.info(f"current_moisture < self.warning_threshold: {current_moisture < self.warning_threshold}")
