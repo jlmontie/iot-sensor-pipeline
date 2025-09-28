@@ -38,7 +38,8 @@ resource "google_project_service" "apis" {
     "run.googleapis.com",
     "eventarc.googleapis.com",
     "cloudbuild.googleapis.com",
-    "storage.googleapis.com"
+    "storage.googleapis.com",
+    "artifactregistry.googleapis.com"
   ])
 
   service            = each.value
@@ -54,6 +55,16 @@ resource "time_sleep" "wait_for_apis" {
 # Random suffix for bucket name uniqueness
 resource "random_id" "bucket_suffix" {
   byte_length = 4
+}
+
+# Artifact Registry repository for container images
+resource "google_artifact_registry_repository" "container_repo" {
+  location      = var.region
+  repository_id = "${local.name_prefix}-repo"
+  description   = "Container images for IoT pipeline"
+  format        = "DOCKER"
+  
+  depends_on = [time_sleep.wait_for_apis]
 }
 
 # Service Account for the pipeline

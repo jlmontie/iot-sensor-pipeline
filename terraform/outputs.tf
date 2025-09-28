@@ -40,6 +40,11 @@ output "function_source_bucket" {
   value       = google_storage_bucket.function_source.name
 }
 
+output "container_repository" {
+  description = "Artifact Registry repository for container images"
+  value       = google_artifact_registry_repository.container_repo.name
+}
+
 
 output "live_demo_info" {
   description = "Live demo URLs for sharing with employers"

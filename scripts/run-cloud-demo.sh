@@ -112,6 +112,29 @@ pip install -r src/requirements.txt
 
 echo "Cloud environment ready!"
 echo ""
+echo "Building and deploying dashboard container..."
+echo "This builds your Streamlit dashboard and deploys it to Cloud Run."
+
+# Build and push the dashboard image
+REGION="us-central1"
+REPO_NAME="iot-demo-dev-repo"  # Must match Terraform: ${local.name_prefix}-repo
+IMAGE_NAME="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/dashboard:latest"
+
+echo "Configuring Docker for Artifact Registry..."
+gcloud auth configure-docker $REGION-docker.pkg.dev
+
+echo "Building dashboard Docker image..."
+docker build --platform linux/amd64 -t $IMAGE_NAME .
+
+echo "Pushing image to Artifact Registry..."
+docker push $IMAGE_NAME
+
+echo "Updating Cloud Run service with new image..."
+gcloud run services update iot-demo-dev-dashboard \
+  --image $IMAGE_NAME \
+  --region $REGION \
+  --platform managed
+
 echo "Frontloading BigQuery with historical data..."
 echo "This populates BigQuery with 6 weeks of historical data (3 sensors) for immediate visualization."
 
