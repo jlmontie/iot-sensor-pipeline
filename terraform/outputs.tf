@@ -40,10 +40,6 @@ output "function_source_bucket" {
   value       = google_storage_bucket.function_source.name
 }
 
-output "scheduler_job_name" {
-  description = "Cloud Scheduler job for automated data generation"
-  value       = google_cloud_scheduler_job.data_generator.name
-}
 
 output "live_demo_info" {
   description = "Live demo URLs for sharing with employers"
@@ -51,15 +47,15 @@ output "live_demo_info" {
     LIVE DEMO READY FOR EMPLOYERS:
     
     Dashboard (always live): ${google_cloud_run_v2_service.dashboard.uri}
-    Data Generator: Runs automatically every hour via Cloud Scheduler
     BigQuery Console: https://console.cloud.google.com/bigquery?project=${var.project_id}
     
-    The demo generates realistic IoT sensor data hourly and displays:
-    - Real-time temperature, humidity, and soil moisture readings
-    - Interactive charts and anomaly detection
-    - Historical trends and aggregated data
+    The demo showcases your ForecastWater ML algorithm with:
+    - 6 weeks of historical sensor data (3 sensors)
+    - Real-time watering predictions and analytics
+    - Interactive dashboard with sensor status summary
+    - Professional REST API with OpenAPI documentation
     
-    Estimated cost: ~$10-15/month for always-on demo
+    Estimated cost: ~$5-10/month for always-on demo
   EOT
 }
 
@@ -68,15 +64,15 @@ output "next_steps" {
   value       = <<-EOT
     Infrastructure deployed successfully!
     
-    For immediate testing:
-    1. Trigger scheduler manually:
-       gcloud scheduler jobs run ${google_cloud_scheduler_job.data_generator.name} --location=${var.region}
+    Your analytics service is ready:
+    1. View live dashboard:
+       ${google_cloud_run_v2_service.dashboard.uri}
     
-    2. Check BigQuery for data:
+    2. Check BigQuery data:
        https://console.cloud.google.com/bigquery?project=${var.project_id}
     
-    3. View live dashboard:
-       ${google_cloud_run_v2_service.dashboard.uri}
+    3. API documentation:
+       The dashboard integrates with your ForecastWater API automatically
     
     For portfolio sharing:
     - GitHub: [Your repo URL]

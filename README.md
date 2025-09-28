@@ -178,7 +178,8 @@ scripts/
 ├── run-cloud-demo.sh      # Deploy to Google Cloud Platform
 ├── validate-cloud-deployment.sh # Pre-deployment validation
 ├── stop-local.sh          # Stop local services
-└── frontload-*.py         # Database initialization
+├── frontload-*.py         # Database initialization
+└── sensor_simulation.py   # Shared sensor simulation functions
 ```
 
 ### Testing

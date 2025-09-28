@@ -12,8 +12,8 @@ import psycopg2
 from datetime import datetime, timezone, timedelta
 
 # Import shared sensor simulation functions
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.common import generate_sensor_reading
+# Import sensor simulation from local scripts directory
+from sensor_simulation import generate_sensor_reading
 
 # Database connection
 DB_CONFIG = {

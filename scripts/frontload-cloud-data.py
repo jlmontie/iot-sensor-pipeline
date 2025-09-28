@@ -11,8 +11,8 @@ from datetime import datetime, timezone, timedelta
 from google.cloud import bigquery
 
 # Import shared sensor simulation functions
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-from src.common import generate_sensor_reading
+# Import sensor simulation from local scripts directory
+from sensor_simulation import generate_sensor_reading
 
 
 def frontload_historical_data(client, table_ref, sensors, num_points=1000):

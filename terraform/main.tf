@@ -38,8 +38,7 @@ resource "google_project_service" "apis" {
     "run.googleapis.com",
     "eventarc.googleapis.com",
     "cloudbuild.googleapis.com",
-    "storage.googleapis.com",
-    "cloudscheduler.googleapis.com"
+    "storage.googleapis.com"
   ])
 
   service            = each.value
@@ -216,61 +215,8 @@ resource "google_cloud_run_service_iam_member" "dashboard_public" {
   member   = "allUsers"
 }
 
-# Cloud Scheduler for automated data generation
-resource "google_cloud_scheduler_job" "data_generator" {
-  name        = "${local.name_prefix}-data-generator"
-  description = "Generate IoT sensor data every hour for live demo"
-  schedule    = "0 * * * *" # Every hour
-  time_zone   = "UTC"
-  region      = var.region
-
-  http_target {
-    http_method = "POST"
-    uri         = "https://pubsub.googleapis.com/v1/projects/${var.project_id}/topics/${google_pubsub_topic.sensor_data.name}:publish"
-
-    headers = {
-      "Content-Type" = "application/json"
-    }
-
-    body = base64encode(jsonencode({
-      messages = [
-        {
-          data = base64encode(jsonencode({
-            sensor_id     = "DEMO-001"
-            timestamp     = timestamp()
-            temperature   = 22.5
-            humidity      = 65.2
-            soil_moisture = 0.45
-          }))
-        },
-        {
-          data = base64encode(jsonencode({
-            sensor_id     = "DEMO-002"
-            timestamp     = timestamp()
-            temperature   = 24.1
-            humidity      = 58.7
-            soil_moisture = 0.38
-          }))
-        },
-        {
-          data = base64encode(jsonencode({
-            sensor_id     = "DEMO-003"
-            timestamp     = timestamp()
-            temperature   = 21.8
-            humidity      = 72.1
-            soil_moisture = 0.52
-          }))
-        }
-      ]
-    }))
-
-    oauth_token {
-      service_account_email = google_service_account.pipeline_sa.email
-    }
-  }
-
-  depends_on = [time_sleep.wait_for_apis]
-}
+# Note: No automated data generation needed for analytics demo
+# Historical data is loaded once via frontload-cloud-data.py script
 
 
 
