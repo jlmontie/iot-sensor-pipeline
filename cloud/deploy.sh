@@ -14,7 +14,7 @@ if [ -z "$PROJECT_ID" ] || [ -z "$BILLING_ACCOUNT_ID" ] || [ -z "$EMAIL" ]; then
     exit 1
 fi
 
-echo "🚀 Deploying IoT Pipeline to Google Cloud..."
+echo " Deploying IoT Pipeline to Google Cloud..."
 echo "Project: $PROJECT_ID"
 echo "Billing: $BILLING_ACCOUNT_ID"
 echo "Email: $EMAIL"
@@ -54,7 +54,7 @@ bq query --use_legacy_sql=false < cloud/bigquery/schema.sql
 
 # Deploy using Terraform (optional)
 if command -v terraform &> /dev/null; then
-    echo "🏗️ Deploying infrastructure with Terraform..."
+    echo "🏗 Deploying infrastructure with Terraform..."
     cd cloud/terraform
     terraform init
     terraform plan -var="project_id=$PROJECT_ID" -var="billing_account=$BILLING_ACCOUNT_ID" -var="notification_email=$EMAIL"
@@ -63,7 +63,7 @@ if command -v terraform &> /dev/null; then
 fi
 
 # Build and deploy Cloud Function
-echo "⚡ Deploying Cloud Function..."
+echo " Deploying Cloud Function..."
 gcloud functions deploy ingest-sensor-data \
     --gen2 \
     --runtime=python311 \
@@ -75,7 +75,7 @@ gcloud functions deploy ingest-sensor-data \
     --timeout=60s
 
 # Build and deploy dashboard
-echo "📊 Building and deploying dashboard..."
+echo " Building and deploying dashboard..."
 docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/iot-pipeline/dashboard:latest cloud/dashboard/
 docker push us-central1-docker.pkg.dev/$PROJECT_ID/iot-pipeline/dashboard:latest
 
@@ -91,7 +91,7 @@ gcloud run deploy iot-dashboard \
     --max-instances 10
 
 # Build and deploy data generator
-echo "🤖 Building and deploying data generator..."
+echo " Building and deploying data generator..."
 docker build -t us-central1-docker.pkg.dev/$PROJECT_ID/iot-pipeline/generator:latest cloud/generator/
 docker push us-central1-docker.pkg.dev/$PROJECT_ID/iot-pipeline/generator:latest
 
@@ -105,7 +105,7 @@ gcloud run jobs create iot-data-generator \
     --parallelism 1 || true
 
 # Deploy workflow
-echo "🔄 Deploying workflow..."
+echo " Deploying workflow..."
 gcloud workflows deploy iot-pipeline \
     --source=cloud/workflows/iot_pipeline.yaml \
     --location=us-central1
@@ -120,15 +120,15 @@ gcloud scheduler jobs create http iot-pipeline-trigger \
     --message-body='{}' \
     --oauth-service-account-email="iot-pipeline-sa@$PROJECT_ID.iam.gserviceaccount.com" || true
 
-echo "✅ Deployment complete!"
+echo " Deployment complete!"
 echo ""
 echo "🌐 Dashboard URL:"
 gcloud run services describe iot-dashboard --region=us-central1 --format="value(status.url)"
 echo ""
-echo "🚀 To start data generation:"
+echo " To start data generation:"
 echo "gcloud run jobs execute iot-data-generator --region=us-central1"
 echo ""
-echo "💰 Monitor costs at: https://console.cloud.google.com/billing"
+echo " Monitor costs at: https://console.cloud.google.com/billing"
 
 
 

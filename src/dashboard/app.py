@@ -140,10 +140,10 @@ def main():
         else:
             st.sidebar.warning(f"API Status: {status.upper()}")
         
-        st.sidebar.metric("Database Connected", "✅" if health_data.get("database_connected") else "❌")
+        st.sidebar.metric("Database Connected", "" if health_data.get("database_connected") else "")
         st.sidebar.metric("Sensors Available", health_data.get("sensors_available", 0))
     else:
-        st.sidebar.error("❌ API Unavailable")
+        st.sidebar.error(" API Unavailable")
     
     # Mode indicator
     mode_text = "Cloud (BigQuery)" if CLOUD_MODE else "Local (PostgreSQL)"

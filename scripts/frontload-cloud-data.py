@@ -71,7 +71,7 @@ def frontload_historical_data(client, table_ref, sensors, num_points=1000):
             total_inserted += len(batch)
             print(f"Inserted batch {i//batch_size + 1}: {total_inserted}/{len(rows_to_insert)} rows")
     
-    print(f"✅ Frontloaded {total_inserted} historical data points over {weeks:.1f} weeks")
+    print(f"Frontloaded {total_inserted} historical data points over {weeks:.1f} weeks")
     return total_inserted
 
 
@@ -88,7 +88,7 @@ def main():
     # Cloud mode uses 3 sensors for cost optimization
     sensors = [f"SENSOR-{i:03d}" for i in range(1, 4)]  # 3 sensors for cloud
     
-    print(f"🚀 Starting Cloud data population with frontloading...")
+    print(f" Starting Cloud data population with frontloading...")
     print(f"Environment: Cloud mode ({len(sensors)} sensors)")
     print(f"Target: {project_id}.{dataset_id}.{table_id}")
     print("This will first insert 1000 hourly historical points (~6 weeks)")
@@ -119,14 +119,14 @@ def main():
         # Frontload historical data
         historical_count = frontload_historical_data(client, table_ref, sensors, 1000)
         
-        print(f"\n📊 Historical data ready! Dashboard should now show rich data.")
+        print(f"\n Historical data ready! Dashboard should now show rich data.")
         print(f"🌐 View in BigQuery: https://console.cloud.google.com/bigquery?project={project_id}")
-        print(f"📈 Dashboard URL: Check your Cloud Run service")
+        print(f" Dashboard URL: Check your Cloud Run service")
         
     except KeyboardInterrupt:
         print(f"\n🛑 Stopped by user")
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"Error: {e}")
         sys.exit(1)
 
 
