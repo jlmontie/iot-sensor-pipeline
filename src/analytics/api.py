@@ -223,17 +223,17 @@ async def get_sensor_status(sensor_id: str):
         if sensor_subset.empty:
             raise HTTPException(status_code=404, detail=f"No data found for sensor {sensor_id}")
         
-        # Get current status
-        current_moisture = sensor_subset['soil_moisture'].iloc[-1]
-        last_reading = sensor_subset['event_time'].iloc[-1]
+        # Get current status (most recent data is first due to DESC order)
+        current_moisture = sensor_subset['soil_moisture'].iloc[0]
+        last_reading = sensor_subset['event_time'].iloc[0]
         
-        # Determine status based on thresholds
+        # Determine status based on thresholds (uppercase for presentation)
         if current_moisture <= 0.2:  # critical_threshold
-            status = "critical"
+            status = "CRITICAL"
         elif current_moisture <= 0.3:  # watering_threshold
-            status = "warning"
+            status = "WARNING"
         else:
-            status = "ok"
+            status = "OK"
         
         return SensorStatus(
             sensor_id=sensor_id,
@@ -273,8 +273,8 @@ async def predict_watering(sensor_id: str):
         # Get comprehensive analysis
         analysis = forecaster.analyze(sensor_subset)
         
-        # Extract key information
-        current_moisture = sensor_subset['moisture'].iloc[-1]
+        # Extract key information (most recent data is first due to DESC order)
+        current_moisture = sensor_subset['moisture'].iloc[0]
         current_time = datetime.now()  # Use actual current time for predictions
         
         # Determine status (uppercase for presentation)
@@ -312,30 +312,36 @@ async def predict_watering(sensor_id: str):
         predicted_date = None
         critical_date = None
         
-        if drying_rate > 0.0001:  # Only predict if there's measurable drying
-            # Hours until watering threshold (0.3)
-            hours_to_watering = max(0, (current_moisture - forecaster.watering_threshold) / drying_rate)
-            # Hours until critical threshold (0.2)  
-            hours_to_critical = max(0, (current_moisture - forecaster.critical_threshold) / drying_rate)
-            
-            # Ensure predictions are always in the future (minimum 1 hour from now)
-            hours_to_watering = max(1, hours_to_watering)
-            hours_to_critical = max(1, hours_to_critical)
-            
-            if hours_to_watering < 8760:  # Within a year
-                predicted_date = current_time + timedelta(hours=hours_to_watering)
-            
-            if hours_to_critical < 8760:  # Within a year
-                critical_date = current_time + timedelta(hours=hours_to_critical)
+        # If already critical or warning, watering is needed TODAY
+        if status == "CRITICAL":
+            predicted_date = current_time  # TODAY
+            critical_date = current_time   # TODAY
+            confidence_score = 0.99  # High confidence for immediate need
+        elif status == "WARNING":
+            predicted_date = current_time  # TODAY
+            critical_date = current_time + timedelta(hours=12)  # Critical in 12 hours
+            confidence_score = 0.95  # High confidence for near-term need
         else:
-            # If no drying trend, estimate based on typical plant behavior
-            # Most plants need watering every 3-7 days
-            days_estimate = 5 - (current_moisture - 0.3) * 10  # Higher moisture = longer time
-            days_estimate = max(1, min(14, days_estimate))  # Clamp between 1-14 days
-            
-            predicted_date = current_time + timedelta(days=days_estimate)
-            critical_date = current_time + timedelta(days=days_estimate + 2)
-            confidence_score = 0.6  # Lower confidence for estimates
+            # For OK status, predict future watering needs
+            if drying_rate > 0.0001:  # Only predict if there's measurable drying
+                # Hours until watering threshold (0.3)
+                hours_to_watering = max(1, (current_moisture - forecaster.watering_threshold) / drying_rate)
+                # Hours until critical threshold (0.2)  
+                hours_to_critical = max(1, (current_moisture - forecaster.critical_threshold) / drying_rate)
+                
+                if hours_to_watering < 8760:  # Within a year
+                    predicted_date = current_time + timedelta(hours=hours_to_watering)
+                
+                if hours_to_critical < 8760:  # Within a year
+                    critical_date = current_time + timedelta(hours=hours_to_critical)
+            else:
+                # If no drying trend, estimate based on typical plant behavior
+                days_estimate = 5 - (current_moisture - 0.3) * 10  # Higher moisture = longer time
+                days_estimate = max(1, min(14, days_estimate))  # Clamp between 1-14 days
+                
+                predicted_date = current_time + timedelta(days=days_estimate)
+                critical_date = current_time + timedelta(days=days_estimate + 2)
+                confidence_score = 0.6  # Lower confidence for estimates
         
         # Get health metrics and recommendations from analysis
         health_metrics = analysis.get('plant_health_metrics', {})
