@@ -67,6 +67,14 @@ graph LR
    ```
 
 3. **Start analytics service**:
+   
+   **Option A: Complete Demo (Recommended)**
+   ```bash
+   # Single command starts API + Dashboard
+   ./scripts/run-local-demo.sh
+   ```
+   
+   **Option B: Manual Start**
    ```bash
    # Terminal 1: API Service
    cd src/analytics
@@ -80,6 +88,26 @@ graph LR
    - **API Documentation**: http://localhost:8000/docs
    - **Dashboard**: http://localhost:8501
    - **API Health**: http://localhost:8000/health
+
+### Cloud Production Deployment
+
+Deploy the analytics service to Google Cloud Platform:
+
+1. **Validate deployment readiness**:
+   ```bash
+   ./scripts/validate-cloud-deployment.sh
+   ```
+
+2. **Deploy to cloud**:
+   ```bash
+   export GCP_PROJECT_ID=your-project-id
+   ./scripts/run-cloud-demo.sh
+   ```
+
+3. **Access cloud deployment**:
+   - Dashboard URL will be provided in Terraform outputs
+   - Automatic data generation via Cloud Scheduler
+   - Production-ready BigQuery backend
 
 ## API Endpoints
 
@@ -145,7 +173,10 @@ src/
 └── requirements.txt        # Python dependencies
 
 scripts/
-├── run-local.sh           # Start local environment
+├── run-local.sh           # Start local infrastructure (PostgreSQL)
+├── run-local-demo.sh      # Complete local demo (API + Dashboard)
+├── run-cloud-demo.sh      # Deploy to Google Cloud Platform
+├── validate-cloud-deployment.sh # Pre-deployment validation
 ├── stop-local.sh          # Stop local services
 └── frontload-*.py         # Database initialization
 ```
