@@ -13,17 +13,17 @@ warnings.filterwarnings('ignore')
 
 class WateringPredictor:
     """
-    An advanced AI-powered system that analyzes plant moisture data to:
-    1. Detect the last watering event with precision
-    2. Predict the next watering date with confidence scoring
-    3. Generate detailed moisture decay curves for visualization
+    Analyzes plant moisture data to predict watering schedules.
     
-    Key Features:
-    - Advanced pattern recognition for watering event detection
+    This class detects watering events, models moisture decay patterns,
+    and predicts when plants will need water next.
+    
+    Features:
+    - Pattern recognition for watering event detection
     - Exponential decay modeling with environmental factors
-    - Machine learning-enhanced predictions
-    - Professional confidence scoring
-    - Interactive visualization capabilities
+    - Machine learning predictions
+    - Confidence scoring
+    - Data visualization
     """
     
     def __init__(self, watering_threshold=0.3, critical_threshold=0.2):
@@ -68,13 +68,13 @@ class WateringPredictor:
         # Sort by timestamp to ensure chronological order
         df_sorted = df.sort_values('timestamp').reset_index(drop=True)
         
-        # 1. DETECT LAST WATERING EVENT (Advanced Algorithm)
+        # 1. DETECT LAST WATERING EVENT
         last_watering = self._detect_last_watering_event(df_sorted)
         
-        # 2. MODEL MOISTURE DECAY PATTERN (Sophisticated Curve Fitting)
+        # 2. MODEL MOISTURE DECAY PATTERN
         decay_model = self._fit_decay_model(df_sorted, last_watering)
         
-        # 3. PREDICT NEXT WATERING DATE (AI-Enhanced Prediction)
+        # 3. PREDICT NEXT WATERING DATE
         next_watering = self._predict_next_watering(df_sorted, decay_model)
         
         # 4. GENERATE MOISTURE DECAY CURVE (7-Day Forecast)
@@ -372,7 +372,7 @@ class WateringPredictor:
                 for h in range(hours_ahead + 1)
             ]
         else:
-            # Use sophisticated decay model
+            # Use decay model
             model_func = decay_model['model_function']
             start_time = decay_model['start_time']
             hours_since_start = (current_time - start_time).total_seconds() / 3600
@@ -515,7 +515,7 @@ class WateringPredictor:
     
     def _analyze_watering_frequency(self, df):
         """Analyze historical watering frequency patterns"""
-        # This would be expanded with more sophisticated analysis
+        # This would be expanded with more detailed analysis
         return {
             'average_days_between_watering': 7,  # Placeholder
             'consistency_score': 0.8,  # Placeholder
@@ -524,7 +524,7 @@ class WateringPredictor:
     
     def create_visualization(self, analysis_results, historical_data=None):
         """
-        Generates a professional dashboard showing all analysis results
+        Generates a dashboard showing all analysis results
         with the moisture decay curve as the centerpiece.
         
         Parameters:
@@ -641,7 +641,7 @@ class WateringPredictor:
 
 class SmartWateringPredictor:
     """
-    AI-powered watering predictor that learns from plant behavior patterns
+    Watering predictor that learns from plant behavior patterns
     and adapts to environmental changes in real-time. Provides a 
     comprehensive analysis of plant health and watering needs including:
 
@@ -691,7 +691,7 @@ class SmartWateringPredictor:
         if not self.is_trained:
             self._auto_train(df_sorted)
         
-        # 1. DETECT LAST WATERING EVENT (ML-Enhanced Detection)
+        # 1. DETECT LAST WATERING EVENT
         last_watering = self._detect_last_watering_event(df_sorted)
         
         # 2. PREDICT NEXT WATERING (ML-Based with Extended Horizon)
@@ -797,7 +797,7 @@ class SmartWateringPredictor:
         return len(moisture_history) / 24
     
     def _detect_last_watering_event(self, df):
-        """ML-enhanced watering event detection"""
+        """Machine learning watering event detection"""
         # Calculate moisture differences
         df['moisture_diff'] = df['moisture'].diff()
         df['time_diff_hours'] = df['timestamp'].diff().dt.total_seconds() / 3600
@@ -820,7 +820,7 @@ class SmartWateringPredictor:
                 'moisture_before': df.loc[last_watering_row.name - 1, 'moisture'],
                 'moisture_after': last_watering_row['moisture'],
                 'increase_amount': last_watering_row['moisture_diff'],
-                'method': 'ML-enhanced pattern recognition'
+                'method': 'Machine learning pattern recognition'
             }
         else:
             # Estimate based on highest moisture point
@@ -836,7 +836,7 @@ class SmartWateringPredictor:
             }
     
     def _predict_next_watering_comprehensive(self, df):
-        """Enhanced next watering prediction with extended horizon"""
+        """Next watering prediction with extended horizon"""
         current_time = df['timestamp'].max()
         current_moisture = df['moisture'].iloc[-1]
         
@@ -1043,7 +1043,7 @@ class SmartWateringPredictor:
         }
         
     def create_features(self, moisture_history, time_features, environmental_data=None):
-        """Create sophisticated features for ML prediction"""
+        """Create features for ML prediction"""
         features = []
         
         # Time-based features

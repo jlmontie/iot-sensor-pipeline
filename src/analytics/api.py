@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 FastAPI service for ForecastWater analytics.
-Exposes the analytical tool as a professional REST API.
+Exposes the analytical tool as a REST API.
 """
 
 import os

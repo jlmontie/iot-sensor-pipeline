@@ -158,7 +158,7 @@ echo ""
 echo "Your analytics service is now live in the cloud!"
 echo ""
 echo "========================================="
-echo "YOUR ANALYTICS SERVICE IS READY!"
+echo "Analytics Service Deployed"
 echo "========================================="
 echo ""
 cd terraform

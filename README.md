@@ -37,10 +37,10 @@ graph LR
 
 ## Key Features
 
-- **Predictive Analytics**: Forecasts watering needs upt to 10 days in advance
+- **Predictive Analytics**: Forecasts watering needs up to 10 days in advance
 - **Real-time API**: Sub-100ms response times for prediction requests
 - **Interactive Dashboard**: Live sensor monitoring with auto-refresh
-- **Professional Documentation**: Auto-generated OpenAPI/Swagger docs
+- **API Documentation**: Auto-generated OpenAPI/Swagger docs
 - **Multi-environment**: Supports both local development and cloud deployment
 
 ## Quick Start

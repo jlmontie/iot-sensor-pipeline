@@ -1,8 +1,8 @@
-# 🌟 IoT Sensor Pipeline - Google Cloud Edition
+# IoT Sensor Pipeline - Google Cloud Edition
 
-**Fully serverless, production-ready IoT data pipeline showcasing modern cloud-native data engineering.**
+Serverless IoT data pipeline showcasing cloud-native data engineering.
 
-## 🏗 Architecture Overview
+## Architecture Overview
 
 ```
 Cloud Run Job → Pub/Sub → Cloud Functions → BigQuery → dbt Cloud → Cloud Run Dashboard
@@ -11,7 +11,7 @@ Data Generator   Streaming   Real-time      Warehouse   Transform   Analytics
 (Scheduled)      Messages    Ingestion      (Serverless) (Managed)   (Auto-scale)
 ```
 
-##  **Cost Breakdown** (~$10.50/month)
+## Cost Breakdown (~$10.50/month)
 
 | Service | Usage | Monthly Cost |
 |---------|-------|--------------|
@@ -22,7 +22,7 @@ Data Generator   Streaming   Real-time      Warehouse   Transform   Analytics
 | Cloud Run Jobs | 1hr/day | ~$3.00 |
 | **Total** | | **~$10.60** |
 
-##  **Quick Deploy**
+## Quick Deploy
 
 ### Prerequisites
 - Google Cloud account with billing enabled
@@ -54,7 +54,7 @@ docker build -t gcr.io/PROJECT_ID/dashboard cloud/dashboard/
 gcloud run deploy iot-dashboard --image gcr.io/PROJECT_ID/dashboard
 ```
 
-##  **What's Included**
+## What's Included
 
 ### **Streaming Data Processing**
 - **Pub/Sub**: Serverless message queue (replaces Kafka)
@@ -72,7 +72,7 @@ gcloud run deploy iot-dashboard --image gcr.io/PROJECT_ID/dashboard
 - **Budget Alerts**: Automated cost monitoring
 - **IAM Security**: Least-privilege service accounts
 
-##  **Development Workflow**
+## Development Workflow
 
 ### **Local Development**
 ```bash
@@ -87,7 +87,7 @@ streamlit run cloud/dashboard/app.py
 - **Container Registry**: Secure image storage
 - **Blue/Green Deployments**: Zero-downtime updates
 
-## 🛡 **Security & Compliance**
+## Security & Compliance
 
 ### **IAM & Security**
 - Service accounts with minimal required permissions
@@ -101,7 +101,7 @@ streamlit run cloud/dashboard/app.py
 - Auto-scaling with min/max instances
 - Data retention policies
 
-##  **Monitoring & Observability**
+## Monitoring & Observability
 
 ### **Built-in Monitoring**
 - Cloud Run metrics (latency, errors, CPU)
@@ -115,7 +115,7 @@ streamlit run cloud/dashboard/app.py
 - Pipeline execution metrics
 - Data quality scorecards
 
-##  **Interview Talking Points**
+## Interview Talking Points
 
 ### **Cloud-Native Design**
 - **Serverless First**: No infrastructure management, pay-per-use
@@ -133,7 +133,7 @@ streamlit run cloud/dashboard/app.py
 - **Data Partitioning**: BigQuery tables partitioned by date for performance
 - **Streaming Architecture**: Real-time processing with Pub/Sub
 
-## 🌐 **Live Demo URLs**
+## Live Demo URLs
 
 After deployment, you'll have:
 - **Dashboard**: `https://iot-dashboard-xyz-uc.a.run.app`
@@ -141,7 +141,7 @@ After deployment, you'll have:
 - **Cloud Monitoring**: Real-time metrics and alerts
 - **GitHub Actions**: CI/CD pipeline status
 
-## 📝 **Next Steps**
+## Next Steps
 
 1. **Add ML Pipeline**: Anomaly detection with Vertex AI
 2. **Multi-Region**: Deploy across multiple zones
@@ -151,7 +151,7 @@ After deployment, you'll have:
 
 ---
 
-** This architecture showcases enterprise-grade data engineering skills while keeping costs under $15/month - perfect for demonstrating cloud expertise to potential employers!**
+This architecture demonstrates data engineering skills while keeping costs under $15/month.
 
 
 
