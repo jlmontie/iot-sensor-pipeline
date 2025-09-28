@@ -112,26 +112,38 @@ pip install -r src/requirements.txt
 
 echo "Cloud environment ready!"
 echo ""
-echo "Building and deploying dashboard container..."
-echo "This builds your Streamlit dashboard and deploys it to Cloud Run."
+echo "Building and deploying API and dashboard containers..."
+echo "This builds your FastAPI service and Streamlit dashboard and deploys them to Cloud Run."
 
-# Build and push the dashboard image
+# Build and push both images
 REGION="us-central1"
 REPO_NAME="iot-demo-dev-repo"  # Must match Terraform: ${local.name_prefix}-repo
-IMAGE_NAME="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/dashboard:latest"
+API_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/api:latest"
+DASHBOARD_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/dashboard:latest"
 
 echo "Configuring Docker for Artifact Registry..."
 gcloud auth configure-docker $REGION-docker.pkg.dev
 
-echo "Building dashboard Docker image..."
-docker build --platform linux/amd64 -t $IMAGE_NAME .
+echo "Building FastAPI service Docker image..."
+docker build --platform linux/amd64 -f Dockerfile.api -t $API_IMAGE .
 
-echo "Pushing image to Artifact Registry..."
-docker push $IMAGE_NAME
+echo "Building Streamlit dashboard Docker image..."
+docker build --platform linux/amd64 -f Dockerfile -t $DASHBOARD_IMAGE .
 
-echo "Updating Cloud Run service with new image..."
+echo "Pushing API image to Artifact Registry..."
+docker push $API_IMAGE
+
+echo "Pushing dashboard image to Artifact Registry..."
+docker push $DASHBOARD_IMAGE
+
+echo "Updating Cloud Run services with new images..."
+gcloud run services update iot-demo-dev-api \
+  --image $API_IMAGE \
+  --region $REGION \
+  --platform managed
+
 gcloud run services update iot-demo-dev-dashboard \
-  --image $IMAGE_NAME \
+  --image $DASHBOARD_IMAGE \
   --region $REGION \
   --platform managed
 
@@ -146,22 +158,27 @@ echo ""
 echo "Your analytics service is now live in the cloud!"
 echo ""
 echo "========================================="
-echo "YOUR DASHBOARD IS READY!"
+echo "YOUR ANALYTICS SERVICE IS READY!"
 echo "========================================="
 echo ""
-echo "DASHBOARD URL:"
 cd terraform
+API_URL=$(terraform output -raw api_url)
 DASHBOARD_URL=$(terraform output -raw dashboard_url)
 cd ..
+
+echo "FASTAPI SERVICE URL:"
+echo "$API_URL"
+echo ""
+echo "DASHBOARD URL:"
 echo "$DASHBOARD_URL"
 echo ""
-echo "Copy and paste this URL into your browser:"
+echo "Copy and paste the dashboard URL into your browser:"
 echo "$DASHBOARD_URL"
 echo ""
 echo "========================================="
 echo "Next steps:"
-echo "1. View dashboard: Open the URL above in your browser"
-echo "2. Test API: The dashboard uses the analytics API automatically"
+echo "1. View dashboard: Open the dashboard URL above in your browser"
+echo "2. Test API: Visit $API_URL/docs for interactive API documentation"
 echo "3. Share with employers: The dashboard URL is your live demo!"
 echo ""
 echo "The system is fully automated - no manual data generation needed!"

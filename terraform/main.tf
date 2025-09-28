@@ -185,6 +185,51 @@ resource "google_cloudfunctions2_function" "ingest_data" {
   }
 }
 
+# Cloud Run service for FastAPI analytics service
+resource "google_cloud_run_v2_service" "api" {
+  name     = "${local.name_prefix}-api"
+  location = var.region
+
+  template {
+    service_account = google_service_account.pipeline_sa.email
+
+    containers {
+      image = "gcr.io/cloudrun/hello" # Will be updated by deployment script
+
+      ports {
+        container_port = 8000
+      }
+
+      env {
+        name  = "DASHBOARD_MODE"
+        value = "cloud"
+      }
+      env {
+        name  = "GCP_PROJECT_ID"
+        value = var.project_id
+      }
+      env {
+        name  = "BQ_DATASET"
+        value = google_bigquery_dataset.pipeline.dataset_id
+      }
+      env {
+        name  = "BQ_TABLE"
+        value = google_bigquery_table.sensor_readings.table_id
+      }
+    }
+  }
+
+  depends_on = [time_sleep.wait_for_apis]
+}
+
+# Make API publicly accessible
+resource "google_cloud_run_service_iam_member" "api_public" {
+  location = google_cloud_run_v2_service.api.location
+  service  = google_cloud_run_v2_service.api.name
+  role     = "roles/run.invoker"
+  member   = "allUsers"
+}
+
 # Cloud Run service for dashboard
 resource "google_cloud_run_v2_service" "dashboard" {
   name     = "${local.name_prefix}-dashboard"
@@ -211,6 +256,10 @@ resource "google_cloud_run_v2_service" "dashboard" {
       env {
         name  = "BQ_TABLE"
         value = google_bigquery_table.sensor_readings.table_id
+      }
+      env {
+        name  = "API_BASE_URL"
+        value = google_cloud_run_v2_service.api.uri
       }
     }
   }

@@ -15,6 +15,16 @@ output "bigquery_dataset" {
   value       = google_bigquery_dataset.pipeline.dataset_id
 }
 
+output "api_url" {
+  description = "Cloud Run API service URL"
+  value       = google_cloud_run_v2_service.api.uri
+}
+
+output "api_service_name" {
+  description = "Cloud Run API service name"
+  value       = google_cloud_run_v2_service.api.name
+}
+
 output "dashboard_url" {
   description = "Cloud Run dashboard URL"
   value       = google_cloud_run_v2_service.dashboard.uri
