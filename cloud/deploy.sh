@@ -23,7 +23,7 @@ echo "Email: $EMAIL"
 gcloud config set project $PROJECT_ID
 
 # Enable required APIs
-echo "📡 Enabling APIs..."
+echo "Enabling APIs..."
 gcloud services enable pubsub.googleapis.com
 gcloud services enable bigquery.googleapis.com
 gcloud services enable run.googleapis.com
@@ -34,27 +34,27 @@ gcloud services enable artifactregistry.googleapis.com
 gcloud services enable cloudbuild.googleapis.com
 
 # Create Artifact Registry repository
-echo "📦 Creating Artifact Registry..."
+echo "Creating Artifact Registry..."
 gcloud artifacts repositories create iot-pipeline \
     --repository-format=docker \
     --location=us-central1 \
     --description="IoT Pipeline container images" || true
 
 # Create Pub/Sub topic and subscription
-echo "📨 Creating Pub/Sub resources..."
+echo "Creating Pub/Sub resources..."
 gcloud pubsub topics create sensor-readings || true
 gcloud pubsub subscriptions create sensor-readings-sub \
     --topic=sensor-readings \
     --ack-deadline=60 || true
 
 # Create BigQuery dataset and tables
-echo "🏢 Setting up BigQuery..."
+echo "Setting up BigQuery..."
 bq mk --dataset --location=US $PROJECT_ID:iot_pipeline || true
 bq query --use_legacy_sql=false < cloud/bigquery/schema.sql
 
 # Deploy using Terraform (optional)
 if command -v terraform &> /dev/null; then
-    echo "🏗 Deploying infrastructure with Terraform..."
+    echo "Deploying infrastructure with Terraform..."
     cd cloud/terraform
     terraform init
     terraform plan -var="project_id=$PROJECT_ID" -var="billing_account=$BILLING_ACCOUNT_ID" -var="notification_email=$EMAIL"
@@ -63,7 +63,7 @@ if command -v terraform &> /dev/null; then
 fi
 
 # Build and deploy Cloud Function
-echo " Deploying Cloud Function..."
+echo "Deploying Cloud Function..."
 gcloud functions deploy ingest-sensor-data \
     --gen2 \
     --runtime=python311 \
@@ -111,7 +111,7 @@ gcloud workflows deploy iot-pipeline \
     --location=us-central1
 
 # Create scheduler job
-echo "⏰ Creating scheduler..."
+echo "Creating scheduler..."
 gcloud scheduler jobs create http iot-pipeline-trigger \
     --schedule="0 */1 * * *" \
     --uri="https://workflowexecutions.googleapis.com/v1/projects/$PROJECT_ID/locations/us-central1/workflows/iot-pipeline/executions" \
@@ -122,15 +122,10 @@ gcloud scheduler jobs create http iot-pipeline-trigger \
 
 echo " Deployment complete!"
 echo ""
-echo "🌐 Dashboard URL:"
+echo "Dashboard URL:"
 gcloud run services describe iot-dashboard --region=us-central1 --format="value(status.url)"
 echo ""
 echo " To start data generation:"
 echo "gcloud run jobs execute iot-data-generator --region=us-central1"
 echo ""
 echo " Monitor costs at: https://console.cloud.google.com/billing"
-
-
-
-
-

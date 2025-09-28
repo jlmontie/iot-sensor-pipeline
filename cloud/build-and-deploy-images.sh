@@ -14,12 +14,12 @@ fi
 REGION="us-central1"
 REPOSITORY="iot-pipeline-dev-repo"
 
-echo "🐳 Building and deploying container images..."
+echo "Building and deploying container images..."
 echo "Project: $PROJECT_ID"
 echo "Repository: $REGION-docker.pkg.dev/$PROJECT_ID/$REPOSITORY"
 
 # Configure Docker for Artifact Registry
-echo "🔐 Configuring Docker authentication..."
+echo "Configuring Docker authentication..."
 gcloud auth configure-docker $REGION-docker.pkg.dev
 
 # Build and push dashboard image
@@ -50,10 +50,10 @@ gcloud run jobs replace iot-pipeline-dev-data-generator \
 
 echo " Container images built and deployed successfully!"
 echo ""
-echo "🌐 Dashboard URL:"
+echo "Dashboard URL:"
 gcloud run services describe iot-pipeline-dev-dashboard --region=$REGION --format="value(status.url)"
 echo ""
-echo " To start data generation:"
+echo "To start data generation:"
 echo "gcloud run jobs execute iot-pipeline-dev-data-generator --region=$REGION"
 
 

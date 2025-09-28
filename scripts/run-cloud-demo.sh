@@ -41,7 +41,7 @@ cd terraform
 terraform init
 
 # Create temporary files that exclude the Cloud Function
-echo "📋 Planning Phase 1 deployment (excluding Cloud Function)..."
+echo "Planning Phase 1 deployment (excluding Cloud Function)..."
 cp main.tf main.tf.backup
 cp outputs.tf outputs.tf.backup
 

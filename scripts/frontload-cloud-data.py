@@ -88,7 +88,7 @@ def main():
     # Cloud mode uses 3 sensors for cost optimization
     sensors = [f"SENSOR-{i:03d}" for i in range(1, 4)]  # 3 sensors for cloud
     
-    print(f" Starting Cloud data population with frontloading...")
+    print("Starting Cloud data population with frontloading...")
     print(f"Environment: Cloud mode ({len(sensors)} sensors)")
     print(f"Target: {project_id}.{dataset_id}.{table_id}")
     print("This will first insert 1000 hourly historical points (~6 weeks)")
@@ -119,12 +119,12 @@ def main():
         # Frontload historical data
         historical_count = frontload_historical_data(client, table_ref, sensors, 1000)
         
-        print(f"\n Historical data ready! Dashboard should now show rich data.")
-        print(f"🌐 View in BigQuery: https://console.cloud.google.com/bigquery?project={project_id}")
-        print(f" Dashboard URL: Check your Cloud Run service")
+        print("\n Historical data ready! Dashboard should now show rich data.")
+        print("View in BigQuery: https://console.cloud.google.com/bigquery?project={project_id}")
+        print("Dashboard URL: Check your Cloud Run service")
         
     except KeyboardInterrupt:
-        print(f"\n🛑 Stopped by user")
+        print("\nStopped by user")
     except Exception as e:
         print(f"Error: {e}")
         sys.exit(1)

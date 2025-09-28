@@ -168,6 +168,7 @@ def main():
                 predicted_date = prediction_data.get("predicted_watering_date")
                 critical_date = prediction_data.get("critical_watering_date")
                 current_moisture = prediction_data.get("current_moisture", 0)
+                confidence_score = prediction_data.get("confidence_score", 0.0)
                 
                 # Determine watering date
                 if "CRITICAL" in status:
@@ -191,6 +192,7 @@ def main():
                     "Sensor ID": sensor_id,
                     "Current Moisture": f"{current_moisture:.3f}",
                     "Status": status,
+                    "ML Confidence": f"{confidence_score:.0%}",
                     "Projected Watering Date": watering_date
                 })
             else:
@@ -198,6 +200,7 @@ def main():
                     "Sensor ID": sensor_id,
                     "Current Moisture": "N/A",
                     "Status": "API Error",
+                    "ML Confidence": "N/A",
                     "Projected Watering Date": "N/A"
                 })
         
