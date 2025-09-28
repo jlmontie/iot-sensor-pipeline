@@ -127,7 +127,9 @@ echo "YOUR DASHBOARD IS READY!"
 echo "========================================="
 echo ""
 echo "DASHBOARD URL:"
+cd terraform
 DASHBOARD_URL=$(terraform output -raw dashboard_url)
+cd ..
 echo "$DASHBOARD_URL"
 echo ""
 echo "Copy and paste this URL into your browser:"
