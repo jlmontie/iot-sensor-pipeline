@@ -47,7 +47,7 @@ output "scheduler_job_name" {
 
 output "live_demo_info" {
   description = "Live demo URLs for sharing with employers"
-  value = <<-EOT
+  value       = <<-EOT
     LIVE DEMO READY FOR EMPLOYERS:
     
     Dashboard (always live): ${google_cloud_run_v2_service.dashboard.uri}
@@ -65,7 +65,7 @@ output "live_demo_info" {
 
 output "next_steps" {
   description = "What to do after Terraform deployment"
-  value = <<-EOT
+  value       = <<-EOT
     Infrastructure deployed successfully!
     
     For immediate testing:

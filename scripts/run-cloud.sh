@@ -13,8 +13,8 @@ if [ -z "$GCP_PROJECT_ID" ]; then
 fi
 
 # Set cloud environment variables for compatibility
-export BQ_DATASET=${BQ_DATASET:-iot_demo_dev_pipeline}
-export PUBSUB_TOPIC=${PUBSUB_TOPIC:-iot-demo-dev-sensor-data}
+export BQ_DATASET=${BQ_DATASET:-iot_pipeline}
+export PUBSUB_TOPIC=${PUBSUB_TOPIC:-iot-pipeline-dev-sensor-data}
 
 echo "Deploying to Google Cloud..."
 echo "Project: $GCP_PROJECT_ID"

@@ -33,7 +33,7 @@ locals {
 resource "google_project_service" "apis" {
   for_each = toset([
     "pubsub.googleapis.com",
-    "bigquery.googleapis.com", 
+    "bigquery.googleapis.com",
     "cloudfunctions.googleapis.com",
     "run.googleapis.com",
     "eventarc.googleapis.com",
@@ -41,14 +41,14 @@ resource "google_project_service" "apis" {
     "storage.googleapis.com",
     "cloudscheduler.googleapis.com"
   ])
-  
-  service = each.value
+
+  service            = each.value
   disable_on_destroy = false
 }
 
 # Wait for APIs to be enabled
 resource "time_sleep" "wait_for_apis" {
-  depends_on = [google_project_service.apis]
+  depends_on      = [google_project_service.apis]
   create_duration = "30s"
 }
 
@@ -68,11 +68,11 @@ resource "google_service_account" "pipeline_sa" {
 resource "google_project_iam_member" "pipeline_roles" {
   for_each = toset([
     "roles/pubsub.subscriber",
-    "roles/pubsub.publisher", 
+    "roles/pubsub.publisher",
     "roles/bigquery.dataEditor",
     "roles/bigquery.jobUser"
   ])
-  
+
   project = var.project_id
   role    = each.value
   member  = "serviceAccount:${google_service_account.pipeline_sa.email}"
@@ -80,7 +80,7 @@ resource "google_project_iam_member" "pipeline_roles" {
 
 # Pub/Sub topic for sensor data
 resource "google_pubsub_topic" "sensor_data" {
-  name = "${local.name_prefix}-sensor-data"
+  name       = "${local.name_prefix}-sensor-data"
   depends_on = [time_sleep.wait_for_apis]
 }
 
@@ -88,7 +88,7 @@ resource "google_pubsub_topic" "sensor_data" {
 resource "google_bigquery_dataset" "pipeline" {
   dataset_id = "iot_pipeline"
   location   = "US"
-  
+
   depends_on = [time_sleep.wait_for_apis]
 }
 
@@ -96,7 +96,7 @@ resource "google_bigquery_dataset" "pipeline" {
 resource "google_bigquery_table" "sensor_readings" {
   dataset_id = google_bigquery_dataset.pipeline.dataset_id
   table_id   = "raw_sensor_readings"
-  
+
   schema = jsonencode([
     {
       name = "sensor_id"
@@ -124,7 +124,7 @@ resource "google_bigquery_table" "sensor_readings" {
       mode = "NULLABLE"
     }
   ])
-  
+
   # Partition by date for performance
   time_partitioning {
     type  = "DAY"
@@ -137,8 +137,8 @@ resource "google_bigquery_table" "sensor_readings" {
 resource "google_storage_bucket" "function_source" {
   name     = "${local.name_prefix}-function-source-${random_id.bucket_suffix.hex}"
   location = var.region
-  
-  depends_on = [time_sleep.wait_for_apis]
+
+  depends_on    = [time_sleep.wait_for_apis]
   force_destroy = true
 }
 
@@ -146,11 +146,11 @@ resource "google_storage_bucket" "function_source" {
 resource "google_cloudfunctions2_function" "ingest_data" {
   name     = "${local.name_prefix}-ingest-data"
   location = var.region
-  
+
   build_config {
     runtime     = "python311"
     entry_point = "process_sensor_data"
-    
+
     source {
       storage_source {
         bucket = google_storage_bucket.function_source.name
@@ -158,7 +158,7 @@ resource "google_cloudfunctions2_function" "ingest_data" {
       }
     }
   }
-  
+
   service_config {
     service_account_email = google_service_account.pipeline_sa.email
     environment_variables = {
@@ -167,7 +167,7 @@ resource "google_cloudfunctions2_function" "ingest_data" {
       BQ_TABLE       = google_bigquery_table.sensor_readings.table_id
     }
   }
-  
+
   event_trigger {
     trigger_region = var.region
     event_type     = "google.cloud.pubsub.topic.v1.messagePublished"
@@ -179,13 +179,13 @@ resource "google_cloudfunctions2_function" "ingest_data" {
 resource "google_cloud_run_v2_service" "dashboard" {
   name     = "${local.name_prefix}-dashboard"
   location = var.region
-  
+
   template {
     service_account = google_service_account.pipeline_sa.email
-    
+
     containers {
-      image = "gcr.io/cloudrun/hello"  # Will be updated by deployment script
-      
+      image = "gcr.io/cloudrun/hello" # Will be updated by deployment script
+
       env {
         name  = "DASHBOARD_MODE"
         value = "cloud"
@@ -204,7 +204,7 @@ resource "google_cloud_run_v2_service" "dashboard" {
       }
     }
   }
-  
+
   depends_on = [time_sleep.wait_for_apis]
 }
 
@@ -220,55 +220,55 @@ resource "google_cloud_run_service_iam_member" "dashboard_public" {
 resource "google_cloud_scheduler_job" "data_generator" {
   name        = "${local.name_prefix}-data-generator"
   description = "Generate IoT sensor data every hour for live demo"
-  schedule    = "0 * * * *"  # Every hour
+  schedule    = "0 * * * *" # Every hour
   time_zone   = "UTC"
   region      = var.region
 
   http_target {
     http_method = "POST"
     uri         = "https://pubsub.googleapis.com/v1/projects/${var.project_id}/topics/${google_pubsub_topic.sensor_data.name}:publish"
-    
+
     headers = {
       "Content-Type" = "application/json"
     }
-    
+
     body = base64encode(jsonencode({
       messages = [
         {
           data = base64encode(jsonencode({
-            sensor_id = "DEMO-001"
-            timestamp = timestamp()
-            temperature = 22.5
-            humidity = 65.2
+            sensor_id     = "DEMO-001"
+            timestamp     = timestamp()
+            temperature   = 22.5
+            humidity      = 65.2
             soil_moisture = 0.45
           }))
         },
         {
           data = base64encode(jsonencode({
-            sensor_id = "DEMO-002"  
-            timestamp = timestamp()
-            temperature = 24.1
-            humidity = 58.7
+            sensor_id     = "DEMO-002"
+            timestamp     = timestamp()
+            temperature   = 24.1
+            humidity      = 58.7
             soil_moisture = 0.38
           }))
         },
         {
           data = base64encode(jsonencode({
-            sensor_id = "DEMO-003"
-            timestamp = timestamp()
-            temperature = 21.8
-            humidity = 72.1
+            sensor_id     = "DEMO-003"
+            timestamp     = timestamp()
+            temperature   = 21.8
+            humidity      = 72.1
             soil_moisture = 0.52
           }))
         }
       ]
     }))
-    
+
     oauth_token {
       service_account_email = google_service_account.pipeline_sa.email
     }
   }
-  
+
   depends_on = [time_sleep.wait_for_apis]
 }
 
