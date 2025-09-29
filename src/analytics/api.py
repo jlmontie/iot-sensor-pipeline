@@ -217,29 +217,39 @@ async def get_sensor_status(sensor_id: str):
         if sensor_id not in sensor_data['sensor_id'].values:
             raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found")
         
-        # Get sensor data subset
+        # Initialize forecaster and get analysis
+        forecaster = SmartWateringPredictor()
+        
+        # Prepare data for SmartWateringPredictor
         sensor_subset = sensor_data[sensor_data['sensor_id'] == sensor_id].copy()
+        sensor_subset = sensor_subset.rename(columns={
+            'event_time': 'timestamp',
+            'soil_moisture': 'moisture'
+        })
         
         if sensor_subset.empty:
             raise HTTPException(status_code=404, detail=f"No data found for sensor {sensor_id}")
         
-        # Get current status (most recent data is first due to DESC order)
-        current_moisture = sensor_subset['soil_moisture'].iloc[0]
-        last_reading = sensor_subset['event_time'].iloc[0]
+        # Get analysis results
+        analysis = forecaster.analyze(sensor_subset)
+        prediction = analysis['next_watering_prediction']
+        health = analysis['plant_health_metrics']
         
-        # Determine status based on thresholds (uppercase for presentation)
-        if current_moisture <= 0.2:  # critical_threshold
-            status = "CRITICAL"
-        elif current_moisture <= 0.3:  # watering_threshold
-            status = "WARNING"
-        else:
-            status = "OK"
+        # Extract status from prediction urgency
+        urgency_to_status = {
+            'CRITICAL': 'CRITICAL',
+            'HIGH': 'WARNING', 
+            'MEDIUM': 'OK',
+            'LOW': 'OK',
+            'NONE': 'OK'
+        }
+        status = urgency_to_status.get(prediction['urgency'], 'OK')
         
         return SensorStatus(
             sensor_id=sensor_id,
-            current_moisture=current_moisture,
+            current_moisture=health['current_moisture'],
             status=status,
-            last_reading=last_reading
+            last_reading=sensor_subset['timestamp'].iloc[0]  # Most recent due to DESC order
         )
         
     except HTTPException:
@@ -263,102 +273,64 @@ async def predict_watering(sensor_id: str):
         # Initialize smart forecaster
         forecaster = SmartWateringPredictor()
         
-        # Prepare data for SmartWateringPredictor (expects 'timestamp' and 'moisture' columns)
+        # Prepare data for SmartWateringPredictor
         sensor_subset = sensor_data[sensor_data['sensor_id'] == sensor_id].copy()
         sensor_subset = sensor_subset.rename(columns={
             'event_time': 'timestamp',
             'soil_moisture': 'moisture'
         })
         
-        # Get comprehensive analysis
+        # Get comprehensive analysis - this does all the work!
         analysis = forecaster.analyze(sensor_subset)
         
-        # Extract key information (most recent data is first due to DESC order)
-        current_moisture = sensor_subset['moisture'].iloc[0]
-        current_time = datetime.now()  # Use actual current time for predictions
+        # Extract results from analysis
+        prediction = analysis['next_watering_prediction']
+        health = analysis['plant_health_metrics']
+        recommendations = analysis['recommendations']
         
-        # Determine status (uppercase for presentation)
-        if current_moisture <= forecaster.critical_threshold:
-            status = "CRITICAL"
-        elif current_moisture <= forecaster.watering_threshold:
-            status = "WARNING"
-        else:
-            status = "OK"
+        # Map urgency to API status format
+        urgency_to_status = {
+            'CRITICAL': 'CRITICAL',
+            'HIGH': 'WARNING',
+            'MEDIUM': 'OK', 
+            'LOW': 'OK',
+            'NONE': 'OK'
+        }
+        status = urgency_to_status.get(prediction['urgency'], 'OK')
         
-        # Generate predictions using simplified but reliable logic
-        from sklearn.linear_model import LinearRegression
-        import numpy as np
-        from datetime import timedelta
-        
-        # Get recent moisture trend (last 100 points or all available)
-        recent_data = sensor_subset.tail(100).copy()
-        recent_data['hours_from_start'] = (
-            recent_data['timestamp'] - recent_data['timestamp'].iloc[0]
-        ).dt.total_seconds() / 3600
-        
-        # Fit linear regression to predict moisture decay
-        X = recent_data['hours_from_start'].values.reshape(-1, 1)
-        y = recent_data['moisture'].values
-        
-        model = LinearRegression()
-        model.fit(X, y)
-        
-        # Calculate drying rate and confidence
-        drying_rate = abs(model.coef_[0])  # moisture units per hour
-        r2_score = model.score(X, y)
-        confidence_score = max(0.1, min(0.99, r2_score))  # Convert R² to confidence
-        
-        # Predict future dates
-        predicted_date = None
+        # Extract prediction dates
+        predicted_date = prediction.get('timestamp')
         critical_date = None
         
-        # If already critical or warning, watering is needed TODAY
-        if status == "CRITICAL":
-            predicted_date = current_time  # TODAY
-            critical_date = current_time   # TODAY
-            confidence_score = 0.99  # High confidence for immediate need
-        elif status == "WARNING":
-            predicted_date = current_time  # TODAY
-            critical_date = current_time + timedelta(hours=12)  # Critical in 12 hours
-            confidence_score = 0.95  # High confidence for near-term need
-        else:
-            # For OK status, predict future watering needs
-            if drying_rate > 0.0001:  # Only predict if there's measurable drying
-                # Hours until watering threshold (0.3)
-                hours_to_watering = max(1, (current_moisture - forecaster.watering_threshold) / drying_rate)
-                # Hours until critical threshold (0.2)  
-                hours_to_critical = max(1, (current_moisture - forecaster.critical_threshold) / drying_rate)
-                
-                if hours_to_watering < 8760:  # Within a year
-                    predicted_date = current_time + timedelta(hours=hours_to_watering)
-                
-                if hours_to_critical < 8760:  # Within a year
-                    critical_date = current_time + timedelta(hours=hours_to_critical)
-            else:
-                # If no drying trend, estimate based on typical plant behavior
-                days_estimate = 5 - (current_moisture - 0.3) * 10  # Higher moisture = longer time
-                days_estimate = max(1, min(14, days_estimate))  # Clamp between 1-14 days
-                
-                predicted_date = current_time + timedelta(days=days_estimate)
-                critical_date = current_time + timedelta(days=days_estimate + 2)
-                confidence_score = 0.6  # Lower confidence for estimates
+        # For critical/high urgency, set critical date appropriately
+        if prediction['urgency'] == 'CRITICAL':
+            critical_date = predicted_date  # Same as predicted for critical
+        elif prediction['urgency'] == 'HIGH':
+            # Critical date is soon after predicted date
+            from datetime import timedelta
+            critical_date = predicted_date + timedelta(hours=12) if predicted_date else None
         
-        # Get health metrics and recommendations from analysis
-        health_metrics = analysis.get('plant_health_metrics', {})
-        recommendations = analysis.get('recommendations', [])
+        # Calculate drying rate from recent data for API compatibility
+        recent_data = sensor_subset.tail(48)  # Last 48 hours
+        drying_rate = 0.0
+        if len(recent_data) >= 2:
+            time_span_hours = (recent_data['timestamp'].max() - recent_data['timestamp'].min()).total_seconds() / 3600
+            if time_span_hours > 0:
+                moisture_change = recent_data['moisture'].iloc[0] - recent_data['moisture'].iloc[-1]
+                drying_rate = max(0.0, moisture_change / time_span_hours)
         
         return PredictionResult(
             sensor_id=sensor_id,
-            current_moisture=current_moisture,
+            current_moisture=health['current_moisture'],
             status=status,
             predicted_watering_date=predicted_date,
             critical_watering_date=critical_date,
-            drying_rate_per_hour=health_metrics.get('drying_rate_per_hour', 0.0),
-            model_accuracy=confidence_score,
+            drying_rate_per_hour=drying_rate,
+            model_accuracy=analysis['model_confidence'],
             samples_used=len(sensor_subset),
             analysis_timestamp=datetime.now(),
-            confidence_score=confidence_score,
-            health_metrics=health_metrics,
+            confidence_score=prediction.get('confidence', analysis['model_confidence']),
+            health_metrics=health,
             recommendations=recommendations
         )
         
@@ -368,7 +340,7 @@ async def predict_watering(sensor_id: str):
         logger.error(f"Error predicting watering: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
-@app.get("/sensors/{sensor_id}/predict/batch", response_model=List[PredictionResult])
+@app.get("/sensors/predict/batch", response_model=List[PredictionResult])
 async def predict_all_sensors():
     """Get watering predictions for all sensors."""
     try:
@@ -393,42 +365,53 @@ async def predict_all_sensors():
                 # Get comprehensive analysis
                 analysis = forecaster.analyze(sensor_subset)
                 
-                # Extract key information
-                current_moisture = sensor_subset['moisture'].iloc[-1]
-                next_watering = analysis.get('next_watering_prediction', {})
-                health_metrics = analysis.get('plant_health_metrics', {})
-                recommendations = analysis.get('recommendations', [])
+                # Extract results from analysis
+                prediction = analysis['next_watering_prediction']
+                health = analysis['plant_health_metrics']
+                recommendations = analysis['recommendations']
                 
-                # Determine status (uppercase for presentation)
-                if current_moisture <= forecaster.critical_threshold:
-                    status = "CRITICAL"
-                elif current_moisture <= forecaster.watering_threshold:
-                    status = "WARNING"
-                else:
-                    status = "OK"
+                # Map urgency to API status format
+                urgency_to_status = {
+                    'CRITICAL': 'CRITICAL',
+                    'HIGH': 'WARNING',
+                    'MEDIUM': 'OK',
+                    'LOW': 'OK', 
+                    'NONE': 'OK'
+                }
+                status = urgency_to_status.get(prediction['urgency'], 'OK')
                 
-                # Extract dates
-                predicted_date = None
+                # Extract prediction dates
+                predicted_date = prediction.get('timestamp')
                 critical_date = None
                 
-                if next_watering and 'predicted_date' in next_watering:
-                    predicted_date = next_watering['predicted_date']
+                # For critical/high urgency, set critical date appropriately
+                if prediction['urgency'] == 'CRITICAL':
+                    critical_date = predicted_date
+                elif prediction['urgency'] == 'HIGH':
+                    from datetime import timedelta
+                    critical_date = predicted_date + timedelta(hours=12) if predicted_date else None
                 
-                if next_watering and 'critical_date' in next_watering:
-                    critical_date = next_watering['critical_date']
+                # Calculate drying rate for API compatibility
+                recent_data = sensor_subset.tail(48)
+                drying_rate = 0.0
+                if len(recent_data) >= 2:
+                    time_span_hours = (recent_data['timestamp'].max() - recent_data['timestamp'].min()).total_seconds() / 3600
+                    if time_span_hours > 0:
+                        moisture_change = recent_data['moisture'].iloc[0] - recent_data['moisture'].iloc[-1]
+                        drying_rate = max(0.0, moisture_change / time_span_hours)
                 
                 predictions.append(PredictionResult(
                     sensor_id=sensor_id,
-                    current_moisture=current_moisture,
+                    current_moisture=health['current_moisture'],
                     status=status,
                     predicted_watering_date=predicted_date,
                     critical_watering_date=critical_date,
-                    drying_rate_per_hour=health_metrics.get('drying_rate_per_hour', 0.0),
-                    model_accuracy=forecaster.confidence_score,
+                    drying_rate_per_hour=drying_rate,
+                    model_accuracy=analysis['model_confidence'],
                     samples_used=len(sensor_subset),
                     analysis_timestamp=datetime.now(),
-                    confidence_score=forecaster.confidence_score,
-                    health_metrics=health_metrics,
+                    confidence_score=prediction.get('confidence', analysis['model_confidence']),
+                    health_metrics=health,
                     recommendations=recommendations
                 ))
                 
