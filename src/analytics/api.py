@@ -319,7 +319,9 @@ async def predict_watering(sensor_id: str):
             if time_span_hours > 0:
                 moisture_change = recent_data['moisture'].iloc[0] - recent_data['moisture'].iloc[-1]
                 drying_rate = max(0.0, moisture_change / time_span_hours)
-        
+
+        curve_data = analysis.get('moisture_decay_curve', []).get('curve_data', [])
+        predicted_decay_curve = [(item['timestamp'], item['predicted_moisture']) for item in curve_data]
         return PredictionResult(
             sensor_id=sensor_id,
             current_moisture=health['current_moisture'],
@@ -331,7 +333,7 @@ async def predict_watering(sensor_id: str):
             samples_used=len(sensor_subset),
             analysis_timestamp=datetime.now(),
             confidence_score=prediction.get('confidence', analysis['model_confidence']),
-            predicted_decay_curve=prediction.get('moisture_decay_curve', []),
+            predicted_decay_curve=predicted_decay_curve,
             health_metrics=health,
             recommendations=recommendations
         )

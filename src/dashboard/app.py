@@ -156,12 +156,16 @@ def main():
     sensors_data = call_api("/sensors")
     if sensors_data:
         summary_data = []
+        # Cache prediction data to avoid multiple API calls
+        prediction_cache = {}
         
         for sensor_meta in sensors_data:
             sensor_id = sensor_meta.get("sensor_id", "Unknown")
             
-            # Get prediction for this sensor
+            # Get prediction for this sensor and cache it
             prediction_data = call_api(f"/sensors/{sensor_id}/predict")
+            if prediction_data:
+                prediction_cache[sensor_id] = prediction_data
             
             if prediction_data:
                 status = prediction_data.get("status", "Unknown")
@@ -203,7 +207,6 @@ def main():
                     "ML Confidence": "N/A",
                     "Projected Watering Date": "N/A"
                 })
-        st.write(f"Predicted Decay Curve data: {prediction_data.get('predicted_decay_curve')}")
         if summary_data:
             df_summary = pd.DataFrame(summary_data)
             
@@ -225,12 +228,8 @@ def main():
             styled_df = df_summary.style.applymap(style_status, subset=['Status']).applymap(style_watering_date, subset=['Projected Watering Date'])
             
             st.dataframe(styled_df, use_container_width=True, hide_index=True)
-        else:
-            st.warning("No sensor data available")
-    else:
-        st.error("Unable to fetch sensor data from API")
-
-    # Historical Data Visualization
+            
+    # Historical Data Visualization (now with prediction cache available)
     st.header("Historical Data & Trends")
     
     # Get raw sensor data for charts
@@ -251,11 +250,77 @@ def main():
                 labels={"soil_moisture": "Soil Moisture", "timestamp": "Time"}
             )
             
+            # Add predicted decay curves for each sensor using cached data
+            if prediction_cache:
+                # Get unique sensor colors from the existing traces
+                sensor_colors = {}
+                for trace in fig_moisture.data:
+                    sensor_id = trace.name
+                    sensor_colors[sensor_id] = trace.line.color
+                
+                # Add decay curves for each sensor
+                for sensor_id, prediction_data in prediction_cache.items():
+                    decay_curve_data = prediction_data.get("predicted_decay_curve", {})
+                    if decay_curve_data:
+                        # Extract timestamps and moisture predictions
+                        pred_timestamps = []
+                        pred_moisture = []
+                        for timestamp, moisture in decay_curve_data:
+                            if timestamp and moisture is not None:
+                                if moisture < 0.2:
+                                    break
+                                else:
+                                    try:
+                                        # Parse timestamp
+                                        if isinstance(timestamp, str):
+                                            timestamp_formatted = datetime.fromisoformat(timestamp.replace('Z', '+00:00'))
+                                        else:
+                                            timestamp_formatted = timestamp
+                                        
+                                        pred_timestamps.append(timestamp_formatted)
+                                        pred_moisture.append(moisture)
+                                    except Exception:
+                                        continue
+                        
+                        # Add prediction curve if we have data
+                        if pred_timestamps and pred_moisture:
+                            # Get sensor color (use default if not found)
+                            color = sensor_colors.get(sensor_id, '#1f77b4')
+                            
+                            fig_moisture.add_trace(go.Scatter(
+                                x=pred_timestamps,
+                                y=pred_moisture,
+                                mode='lines',
+                                name=f"{sensor_id} (Predicted)",
+                                line=dict(
+                                    color=color,
+                                    width=3,
+                                    dash='dot'
+                                ),
+                                opacity=0.7,
+                                hovertemplate="<b>%{fullData.name}</b><br>" +
+                                            "Time: %{x}<br>" +
+                                            "Predicted Moisture: %{y:.1%}<br>" +
+                                            "<extra></extra>"
+                            ))
+            
             # Add threshold lines
             fig_moisture.add_hline(y=0.2, line_dash="dash", line_color="red", 
-                                 annotation_text="Critical Threshold (0.2)")
+                                    annotation_text="Critical Threshold (0.2)")
             fig_moisture.add_hline(y=0.3, line_dash="dash", line_color="orange", 
-                                 annotation_text="Warning Threshold (0.3)")
+                                    annotation_text="Warning Threshold (0.3)")
+            
+            # Update layout for better visualization
+            fig_moisture.update_layout(
+                hovermode='x unified',
+                legend=dict(
+                    orientation="h",
+                    yanchor="bottom",
+                    y=1.02,
+                    xanchor="right",
+                    x=1
+                )
+            )
             
             st.plotly_chart(fig_moisture, use_container_width=True)
         
