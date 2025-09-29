@@ -13,9 +13,13 @@ cd "$(dirname "$0")/.."
 # Check if database is running
 if ! docker ps | grep -q postgres; then
     echo "Starting database infrastructure..."
-    ./scripts/run-local.sh
-    echo "Waiting for services to initialize..."
-    sleep 30
+    docker compose up -d
+    echo "Waiting for database to initialize..."
+    sleep 10
+    
+    # Frontload dashboard data
+    echo "Loading initial data..."
+    python scripts/frontload-dashboard-data.py
 fi
 
 # Activate virtual environment
