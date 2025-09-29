@@ -24,6 +24,7 @@ Data Generator   Streaming   Real-time      Warehouse   Transform   Analytics
 
 ## Quick Deploy
 
+
 ### Prerequisites
 - Google Cloud account with billing enabled
 - `gcloud` CLI installed and authenticated

@@ -29,6 +29,7 @@ graph LR
     style G fill:#f3e5f5
 ```
 
+
 **Components:**
 - **Analytics API**: FastAPI service exposing ML predictions via REST endpoints
 - **Dashboard**: Streamlit interface for real-time monitoring and visualization
