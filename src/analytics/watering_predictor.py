@@ -272,6 +272,7 @@ class SmartWateringPredictor:
         
         # Use ML model to predict future moisture levels
         moisture_history = df['moisture'].tail(24).values
+        predicted_decay_curve = []  # List of tuples (future_time, predicted_moisture)
         
         # Predict up to 336 hours (14 days) to find watering point
         for hours_ahead in range(1, 337):

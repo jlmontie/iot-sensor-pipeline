@@ -203,7 +203,7 @@ def main():
                     "ML Confidence": "N/A",
                     "Projected Watering Date": "N/A"
                 })
-        
+        st.write(f"Predicted Decay Curve data: {prediction_data.get('predicted_decay_curve')}")
         if summary_data:
             df_summary = pd.DataFrame(summary_data)
             

@@ -7,7 +7,7 @@ Exposes the analytical tool as a REST API.
 import os
 import sys
 from datetime import datetime
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict, Any, Tuple
 import logging
 
 from fastapi import FastAPI, HTTPException, Depends
@@ -61,6 +61,7 @@ class PredictionResult(BaseModel):
     samples_used: int
     analysis_timestamp: datetime
     confidence_score: Optional[float]
+    predicted_decay_curve: Optional[List[Tuple[datetime, float]]]
     health_metrics: Optional[Dict[str, Any]]
     recommendations: Optional[List[str]]
 
@@ -330,6 +331,7 @@ async def predict_watering(sensor_id: str):
             samples_used=len(sensor_subset),
             analysis_timestamp=datetime.now(),
             confidence_score=prediction.get('confidence', analysis['model_confidence']),
+            predicted_decay_curve=prediction.get('moisture_decay_curve', []),
             health_metrics=health,
             recommendations=recommendations
         )
@@ -411,6 +413,7 @@ async def predict_all_sensors():
                     samples_used=len(sensor_subset),
                     analysis_timestamp=datetime.now(),
                     confidence_score=prediction.get('confidence', analysis['model_confidence']),
+                    predicted_decay_curve=prediction.get('moisture_decay_curve', []),
                     health_metrics=health,
                     recommendations=recommendations
                 ))
