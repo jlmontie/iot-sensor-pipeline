@@ -78,16 +78,48 @@ Test the open prediction endpoint with your own data.
 curl -X POST "https://iot-demo-dev-api-76c3tvdyfq-uc.a.run.app/predict" \
      -H "Content-Type: application/json" \
      -d '{
-       "moisture_readings": [0.65, 0.58, 0.52, 0.45, 0.38],
+       "moisture_readings": [0.98, 0.90, 0.84, 0.82, 0.77, 0.65, 0.58, 0.52, 0.45, 0.38],
        "timestamps": [
-         "2025-09-25T10:00:00",
-         "2025-09-26T10:00:00", 
-         "2025-09-27T10:00:00",
-         "2025-09-28T10:00:00",
-         "2025-09-29T10:00:00"
+         "2025-09-01T10:00:00",
+         "2025-09-02T10:00:00",
+         "2025-09-03T10:00:00",
+         "2025-09-04T10:00:00",
+         "2025-09-05T10:00:00",
+         "2025-09-06T10:00:00",
+         "2025-09-07T10:00:00",
+         "2025-09-08T10:00:00",
+         "2025-09-09T10:00:00",
+         "2025-09-10T10:00:00"
        ],
        "sensor_id": "my-garden-sensor"
      }'
+```
+
+Example response:
+```json
+{
+    "sensor_id": "my-garden-sensor",
+    "current_moisture": 0.38,
+    "status": "OK",
+    "predicted_watering_date": "2025-09-14T09:00:00",
+    "critical_watering_date": "2025-09-18T18:00:00",
+    "drying_rate_per_hour": 3.9803444303079902,
+    "model_accuracy": 0.95,
+    "samples_used": 10,
+    "analysis_timestamp": "2025-09-30T16:47:23.965443",
+    "confidence_score": 0.95,
+    "predicted_decay_curve": [],
+    "health_metrics": {
+        "health_score": 100,
+        "average_moisture_7d": 0.62625,
+        "days_since_last_watering": 9.0,
+        "moisture_stability": 0.17303488500464703
+    },
+    "recommendations": [
+        "Excellent plant health! Continue current care routine.",
+        "High moisture variability detected. Consider more consistent watering."
+    ]
+}
 ```
 
 ## Quick Start
