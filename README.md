@@ -75,21 +75,23 @@ graph LR
 Test the open prediction endpoint with your own data.  
 
 ```bash
+# Test the open prediction endpoint with your own data
+# Note: Dashboard data is automatically adjusted to current time for live predictions
 curl -X POST "https://iot-demo-dev-api-76c3tvdyfq-uc.a.run.app/predict" \
      -H "Content-Type: application/json" \
      -d '{
        "moisture_readings": [0.98, 0.90, 0.84, 0.82, 0.77, 0.65, 0.58, 0.52, 0.45, 0.38],
        "timestamps": [
-         "2025-09-01T10:00:00",
-         "2025-09-02T10:00:00",
-         "2025-09-03T10:00:00",
-         "2025-09-04T10:00:00",
-         "2025-09-05T10:00:00",
-         "2025-09-06T10:00:00",
-         "2025-09-07T10:00:00",
-         "2025-09-08T10:00:00",
-         "2025-09-09T10:00:00",
-         "2025-09-10T10:00:00"
+         "2024-12-01T10:00:00",
+         "2024-12-02T10:00:00",
+         "2024-12-03T10:00:00",
+         "2024-12-04T10:00:00",
+         "2024-12-05T10:00:00",
+         "2024-12-06T10:00:00",
+         "2024-12-07T10:00:00",
+         "2024-12-08T10:00:00",
+         "2024-12-09T10:00:00",
+         "2024-12-10T10:00:00"
        ],
        "sensor_id": "my-garden-sensor"
      }'

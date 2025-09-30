@@ -6,7 +6,7 @@ Exposes the analytical tool as a REST API.
 
 import os
 import sys
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import List, Optional, Dict, Any, Tuple
 import logging
 
@@ -24,6 +24,41 @@ from analytics.watering_predictor import SmartWateringPredictor
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+
+def adjust_timestamps_to_current(
+    df: pd.DataFrame, timestamp_col: str = "event_time"
+) -> pd.DataFrame:
+    """
+    Adjust timestamps in a DataFrame so the most recent becomes 'now' while preserving intervals.
+    This corrects for the fact that the timestamps in the database are older than the current time.
+
+    Args:
+        df: DataFrame with timestamp column
+        timestamp_col: Name of the timestamp column
+
+    Returns:
+        DataFrame with adjusted timestamps
+    """
+    if df.empty or timestamp_col not in df.columns:
+        return df
+
+    df_copy = df.copy()
+
+    # Ensure timestamp column is datetime
+    if not pd.api.types.is_datetime64_any_dtype(df_copy[timestamp_col]):
+        df_copy[timestamp_col] = pd.to_datetime(df_copy[timestamp_col])
+
+    # Calculate offset to make the most recent timestamp "now"
+    most_recent = df_copy[timestamp_col].max()
+    current_time = datetime.now()
+    time_offset = current_time - most_recent
+
+    # Apply offset to all timestamps
+    df_copy[timestamp_col] = df_copy[timestamp_col] + time_offset
+
+    return df_copy
+
 
 # FastAPI app
 app = FastAPI(
@@ -140,7 +175,8 @@ def load_sensor_data(limit: int = 5000):
         ORDER BY event_time DESC
         LIMIT {limit}
         """
-        return client.query(query).to_dataframe()
+        df = client.query(query).to_dataframe()
+        return adjust_timestamps_to_current(df, "event_time")
     else:
         # PostgreSQL query
         engine = get_database()
@@ -155,7 +191,8 @@ def load_sensor_data(limit: int = 5000):
         ORDER BY event_time DESC
         LIMIT {limit}
         """
-        return pd.read_sql(text(query), engine)
+        df = pd.read_sql(text(query), engine)
+        return adjust_timestamps_to_current(df, "event_time")
 
 
 # API Endpoints
