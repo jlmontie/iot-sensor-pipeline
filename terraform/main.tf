@@ -80,7 +80,8 @@ resource "google_project_iam_member" "pipeline_roles" {
     "roles/pubsub.subscriber",
     "roles/pubsub.publisher",
     "roles/bigquery.dataEditor",
-    "roles/bigquery.jobUser"
+    "roles/bigquery.jobUser",
+    "roles/run.invoker"
   ])
 
   project = var.project_id

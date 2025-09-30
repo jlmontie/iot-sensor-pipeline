@@ -23,6 +23,7 @@ Thumbs.db
 *.pem
 terraform.tfvars
 *.tfplan
+github-actions-key.json
 
 # === Terraform State and Local Files ===
 terraform.tfstate

@@ -116,24 +116,6 @@ streamlit run cloud/dashboard/app.py
 - Pipeline execution metrics
 - Data quality scorecards
 
-## Interview Talking Points
-
-### **Cloud-Native Design**
-- **Serverless First**: No infrastructure management, pay-per-use
-- **Auto-Scaling**: Handles traffic spikes automatically
-- **Cost Optimization**: Intelligent resource allocation
-
-### **Production Readiness**
-- **CI/CD Pipeline**: Automated testing, linting, deployment
-- **Monitoring**: Comprehensive observability and alerting
-- **Security**: IAM best practices, encrypted data
-- **Disaster Recovery**: Multi-region backup strategies
-
-### **Scalability**
-- **Horizontal Scaling**: Cloud Run scales to zero and up to millions of requests
-- **Data Partitioning**: BigQuery tables partitioned by date for performance
-- **Streaming Architecture**: Real-time processing with Pub/Sub
-
 ## Live Demo URLs
 
 After deployment, you'll have:
@@ -149,12 +131,3 @@ After deployment, you'll have:
 3. **Real-time Alerts**: SMS/Email notifications for anomalies
 4. **Mobile App**: Flutter app consuming the API
 5. **Edge Computing**: IoT Core integration
-
----
-
-This architecture demonstrates data engineering skills while keeping costs under $15/month.
-
-
-
-
-
