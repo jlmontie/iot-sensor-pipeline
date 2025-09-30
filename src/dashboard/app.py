@@ -96,56 +96,15 @@ def call_api(endpoint: str):
 
 @st.cache_data(ttl=60)  # Cache sensor data for 1 minute
 def get_sensor_data():
-    """Get sensor data from database (fallback if API fails)."""
-    if CLOUD_MODE:
-        PROJECT_ID = os.getenv("GCP_PROJECT_ID")
-        if not PROJECT_ID:
-            st.error("Error: Set GCP_PROJECT_ID environment variable for cloud mode")
-            return pd.DataFrame()
-
-        from google.cloud import bigquery
-
-        client = bigquery.Client(project=PROJECT_ID)
-        BQ_DATASET = os.getenv("BQ_DATASET", "iot_pipeline")
-        BQ_TABLE = os.getenv("BQ_TABLE", "raw_sensor_readings")
-
-        query = f"""
-        SELECT 
-            sensor_id,
-            event_time as timestamp,
-            temperature_c as temperature,
-            humidity_pct as humidity,
-            soil_moisture
-        FROM `{PROJECT_ID}.{BQ_DATASET}.{BQ_TABLE}`
-        ORDER BY event_time DESC
-        LIMIT 1000
-        """
-        return client.query(query).to_dataframe()
+    """Get sensor data from API (proper architecture)."""
+    data = call_api("/sensors/data")
+    if data:
+        df = pd.DataFrame(data)
+        # API already handles time adjustment, so no need to do it here
+        return df
     else:
-        from sqlalchemy import create_engine, text
-
-        DB_USER = os.getenv("POSTGRES_USER", "postgres")
-        DB_PASS = os.getenv("POSTGRES_PASSWORD", "postgres")
-        DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
-        DB_PORT = os.getenv("POSTGRES_PORT", "5433")
-        DB_NAME = os.getenv("POSTGRES_DB", "iot")
-
-        engine = create_engine(
-            f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
-        )
-
-        query = """
-        SELECT 
-            sensor_id,
-            event_time as timestamp,
-            temperature_c as temperature,
-            humidity_pct as humidity,
-            soil_moisture
-        FROM raw_sensor_readings
-        ORDER BY event_time DESC
-        LIMIT 1000
-        """
-        return pd.read_sql(text(query), engine)
+        st.error("Failed to load sensor data from API")
+        return pd.DataFrame()
 
 
 def main():

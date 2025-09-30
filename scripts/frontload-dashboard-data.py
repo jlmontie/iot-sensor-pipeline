@@ -15,13 +15,13 @@ from datetime import datetime, timezone, timedelta
 # Import sensor simulation from local scripts directory
 from sensor_simulation import generate_sensor_reading
 
-# Database connection
+# Database connection using environment variables
 DB_CONFIG = {
-    'host': 'localhost',
-    'port': 5433,
-    'database': 'iot',
-    'user': 'postgres',
-    'password': 'postgres'
+    'host': os.getenv('POSTGRES_HOST', 'localhost'),
+    'port': int(os.getenv('POSTGRES_PORT', '5433')),
+    'database': os.getenv('POSTGRES_DB', 'iot'),
+    'user': os.getenv('POSTGRES_USER', 'postgres'),
+    'password': os.getenv('POSTGRES_PASSWORD', 'postgres')
 }
 
 # Sensor simulation functions moved to src/common/sensor_simulation.py
