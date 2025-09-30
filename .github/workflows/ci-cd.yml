@@ -95,12 +95,15 @@ jobs:
           cp cloud/functions/* /tmp/function-source/
           cd /tmp/function-source && zip -r ../function-source.zip .
           
-          # Get bucket name from terraform output
-          BUCKET_NAME=$(terraform -chdir=terraform output -raw function_source_bucket 2>/dev/null || echo "")
-          if [ ! -z "$BUCKET_NAME" ]; then
-            echo "Uploading function source to bucket: $BUCKET_NAME"
-            gsutil cp /tmp/function-source.zip gs://$BUCKET_NAME/function-source.zip
-          fi
+          # Upload to a predictable bucket name (will be created by terraform)
+          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
+          BUCKET_NAME="iot-demo-dev-function-source-$(echo -n "iot-demo-dev" | md5sum | cut -c1-8)"
+          
+          echo "Creating bucket if it doesn't exist: $BUCKET_NAME"
+          gsutil mb gs://$BUCKET_NAME 2>/dev/null || true
+          
+          echo "Uploading function source to bucket: $BUCKET_NAME"
+          gsutil cp /tmp/function-source.zip gs://$BUCKET_NAME/function-source.zip
 
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve tfplan
