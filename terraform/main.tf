@@ -6,7 +6,7 @@ terraform {
   
   # Remote state backend for consistency between local and CI/CD
   backend "gcs" {
-    bucket = "iot-demo-dev-terraform-state"
+    bucket = "iot-demo-dev-terraform-state-v2"
     prefix = "terraform/state"
   }
   
