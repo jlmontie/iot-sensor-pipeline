@@ -110,31 +110,35 @@ jobs:
 
       - name: Build and Deploy Container Images
         run: |
-          # Set variables
-          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
-          REPOSITORY="iot-demo-dev-repo"
+          # Set variables (matching run-cloud-demo.sh exactly)
+          GCP_PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
           REGION="us-central1"
+          REPO_NAME="iot-demo-dev-repo"
+          API_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/api:latest"
+          DASHBOARD_IMAGE="$REGION-docker.pkg.dev/$GCP_PROJECT_ID/$REPO_NAME/dashboard:latest"
           
-          # Configure Docker for Artifact Registry
-          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+          echo "Configuring Docker for Artifact Registry..."
+          gcloud auth configure-docker $REGION-docker.pkg.dev
           
-          # Build and push API image
-          echo "Building API container..."
-          docker build --platform linux/amd64 -f Dockerfile.api -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest .
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest
+          echo "Building FastAPI service Docker image..."
+          docker build --platform linux/amd64 -f Dockerfile.api -t $API_IMAGE .
           
-          # Build and push Dashboard image  
-          echo "Building Dashboard container..."
-          docker build --platform linux/amd64 -f Dockerfile.dashboard -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest .
-          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest
+          echo "Building Streamlit dashboard Docker image..."
+          docker build --platform linux/amd64 -f Dockerfile -t $DASHBOARD_IMAGE .
           
-          # Update Cloud Run services
-          echo "Updating API service..."
+          echo "Pushing API image to Artifact Registry..."
+          docker push $API_IMAGE
+          
+          echo "Pushing dashboard image to Artifact Registry..."
+          docker push $DASHBOARD_IMAGE
+          
+          echo "Updating Cloud Run services with new images..."
           gcloud run services update iot-demo-dev-api \
-            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest \
-            --region=${REGION}
+            --image $API_IMAGE \
+            --region $REGION \
+            --platform managed
             
-          echo "Updating Dashboard service..."
           gcloud run services update iot-demo-dev-dashboard \
-            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest \
-            --region=${REGION}
+            --image $DASHBOARD_IMAGE \
+            --region $REGION \
+            --platform managed
