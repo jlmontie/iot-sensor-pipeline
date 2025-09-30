@@ -494,15 +494,20 @@ async def predict_arbitrary_data(request: PredictionRequest):
     Example request:
     ```json
     {
-        "moisture_readings": [0.65, 0.58, 0.52, 0.45, 0.38],
-        "timestamps": [
-            "2025-09-25T10:00:00",
-            "2025-09-26T10:00:00",
-            "2025-09-27T10:00:00",
-            "2025-09-28T10:00:00",
-            "2025-09-29T10:00:00"
-        ],
-        "sensor_id": "my-custom-sensor"
+       "moisture_readings": [0.98, 0.90, 0.84, 0.82, 0.77, 0.65, 0.58, 0.52, 0.45, 0.38],
+       "timestamps": [
+         "2025-09-01T10:00:00",
+         "2025-09-02T10:00:00",
+         "2025-09-03T10:00:00",
+         "2025-09-04T10:00:00",
+         "2025-09-05T10:00:00",
+         "2025-09-06T10:00:00",
+         "2025-09-07T10:00:00",
+         "2025-09-08T10:00:00",
+         "2025-09-09T10:00:00",
+         "2025-09-10T10:00:00"
+       ],
+       "sensor_id": "my-garden-sensor"
     }
     ```
     """
@@ -514,10 +519,10 @@ async def predict_arbitrary_data(request: PredictionRequest):
                 detail="Number of moisture readings must match number of timestamps",
             )
 
-        if len(request.moisture_readings) < 5:
+        if len(request.moisture_readings) < 10:
             raise HTTPException(
                 status_code=400,
-                detail="At least 5 data points required for accurate prediction",
+                detail="At least 10 data points required for accurate prediction",
             )
 
         # Validate moisture values
@@ -562,8 +567,15 @@ async def predict_arbitrary_data(request: PredictionRequest):
         current_moisture = df["moisture"].iloc[-1]  # Most recent reading
 
         next_watering = analysis.get("next_watering_prediction", {})
-        predicted_date = next_watering.get("predicted_date")
-        critical_date = next_watering.get("critical_date")
+        predicted_date = next_watering.get("timestamp")
+        
+        # Calculate critical date based on when moisture reaches critical threshold
+        critical_date = None
+        decay_curve = analysis.get("moisture_decay_curve", {}).get("curve_data", [])
+        for point in decay_curve:
+            if point.get("status") == "CRITICAL":
+                critical_date = point.get("timestamp")
+                break
 
         # Determine status based on current moisture
         if current_moisture <= forecaster.critical_threshold:
@@ -574,9 +586,23 @@ async def predict_arbitrary_data(request: PredictionRequest):
             status = "OK"
 
         # Get health metrics and recommendations
-        health_metrics = analysis.get("health_metrics", {})
+        plant_health = analysis.get("plant_health_metrics", {})
         recommendations = analysis.get("recommendations", [])
         confidence_score = analysis.get("model_confidence", 0.5)
+
+        # Extract required fields from analysis or provide defaults
+        drying_rate_per_hour = next_watering.get("hours_from_now", 24) / 24.0  # Convert to rate per hour
+        model_accuracy = confidence_score
+        samples_used = len(df)
+        analysis_timestamp = analysis.get("analysis_metadata", {}).get("timestamp", datetime.now())
+        
+        # Prepare health_metrics dict for response
+        health_metrics = {
+            "health_score": plant_health.get("health_score", 85),
+            "average_moisture_7d": plant_health.get("average_moisture_7d", current_moisture),
+            "days_since_last_watering": plant_health.get("days_since_last_watering", 1.0),
+            "moisture_stability": plant_health.get("moisture_stability", 0.1),
+        }
 
         # Get predicted decay curve
         predicted_decay_curve = analysis.get("moisture_decay_curve", {}).get(
@@ -589,6 +615,10 @@ async def predict_arbitrary_data(request: PredictionRequest):
             status=status,
             predicted_watering_date=predicted_date,
             critical_watering_date=critical_date,
+            drying_rate_per_hour=drying_rate_per_hour,
+            model_accuracy=model_accuracy,
+            samples_used=samples_used,
+            analysis_timestamp=analysis_timestamp,
             confidence_score=confidence_score,
             health_metrics=health_metrics,
             recommendations=recommendations,
