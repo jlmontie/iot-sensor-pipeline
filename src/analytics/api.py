@@ -568,7 +568,7 @@ async def predict_arbitrary_data(request: PredictionRequest):
 
         next_watering = analysis.get("next_watering_prediction", {})
         predicted_date = next_watering.get("timestamp")
-        
+
         # Calculate critical date based on when moisture reaches critical threshold
         critical_date = None
         decay_curve = analysis.get("moisture_decay_curve", {}).get("curve_data", [])
@@ -591,16 +591,24 @@ async def predict_arbitrary_data(request: PredictionRequest):
         confidence_score = analysis.get("model_confidence", 0.5)
 
         # Extract required fields from analysis or provide defaults
-        drying_rate_per_hour = next_watering.get("hours_from_now", 24) / 24.0  # Convert to rate per hour
+        drying_rate_per_hour = (
+            next_watering.get("hours_from_now", 24) / 24.0
+        )  # Convert to rate per hour
         model_accuracy = confidence_score
         samples_used = len(df)
-        analysis_timestamp = analysis.get("analysis_metadata", {}).get("timestamp", datetime.now())
-        
+        analysis_timestamp = analysis.get("analysis_metadata", {}).get(
+            "timestamp", datetime.now()
+        )
+
         # Prepare health_metrics dict for response
         health_metrics = {
             "health_score": plant_health.get("health_score", 85),
-            "average_moisture_7d": plant_health.get("average_moisture_7d", current_moisture),
-            "days_since_last_watering": plant_health.get("days_since_last_watering", 1.0),
+            "average_moisture_7d": plant_health.get(
+                "average_moisture_7d", current_moisture
+            ),
+            "days_since_last_watering": plant_health.get(
+                "days_since_last_watering", 1.0
+            ),
             "moisture_stability": plant_health.get("moisture_stability", 0.1),
         }
 
