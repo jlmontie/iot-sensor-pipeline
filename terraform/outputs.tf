@@ -57,9 +57,9 @@ output "container_repository" {
 
 
 output "live_demo_info" {
-  description = "Live demo URLs for sharing with employers"
+  description = "Live demo URLs for sharing"
   value       = <<-EOT
-    LIVE DEMO READY FOR EMPLOYERS:
+    LIVE DEMO READY:
     
     Dashboard (always live): ${google_cloud_run_v2_service.dashboard.uri}
     BigQuery Console: https://console.cloud.google.com/bigquery?project=${var.project_id}

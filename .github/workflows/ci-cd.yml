@@ -88,5 +88,19 @@ jobs:
             -var="project_name=iot-demo" \
             -var="environment=dev"
 
+      - name: Prepare Cloud Function Source
+        run: |
+          # Create function source zip
+          mkdir -p /tmp/function-source
+          cp cloud/functions/* /tmp/function-source/
+          cd /tmp/function-source && zip -r ../function-source.zip .
+          
+          # Get bucket name from terraform output
+          BUCKET_NAME=$(terraform -chdir=terraform output -raw function_source_bucket 2>/dev/null || echo "")
+          if [ ! -z "$BUCKET_NAME" ]; then
+            echo "Uploading function source to bucket: $BUCKET_NAME"
+            gsutil cp /tmp/function-source.zip gs://$BUCKET_NAME/function-source.zip
+          fi
+
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve tfplan
