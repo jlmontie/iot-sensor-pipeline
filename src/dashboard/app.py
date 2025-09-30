@@ -15,6 +15,21 @@ import requests
 from datetime import datetime
 import time
 
+GA_MEASUREMENT_ID = "G-CN38644DDS"  # your GA4 Measurement ID
+
+gtag = f"""
+<!-- Global site tag (gtag.js) - Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id={GA_MEASUREMENT_ID}"></script>
+<script>
+  window.dataLayer = window.dataLayer || [];
+  function gtag(){{dataLayer.push(arguments);}}
+  gtag('js', new Date());
+  gtag('config', '{GA_MEASUREMENT_ID}');
+</script>
+"""
+
+st.components.v1.html(gtag, height=0)
+
 # Configuration
 DASHBOARD_MODE = os.getenv("DASHBOARD_MODE", "local").lower()
 CLOUD_MODE = DASHBOARD_MODE == "cloud"
