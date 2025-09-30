@@ -15,6 +15,18 @@ import requests
 from datetime import datetime
 import time
 
+# MUST be the first Streamlit command
+st.set_page_config(
+    page_title="IoT Agricultural Analytics Platform",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# Configuration
+DASHBOARD_MODE = os.getenv("DASHBOARD_MODE", "local").lower()
+CLOUD_MODE = DASHBOARD_MODE == "cloud"
+API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
+
 GA_MEASUREMENT_ID = "G-CN38644DDS"  # your GA4 Measurement ID
 
 gtag = f"""
@@ -29,17 +41,6 @@ gtag = f"""
 """
 
 st.components.v1.html(gtag, height=0)
-
-# Configuration
-DASHBOARD_MODE = os.getenv("DASHBOARD_MODE", "local").lower()
-CLOUD_MODE = DASHBOARD_MODE == "cloud"
-API_BASE_URL = os.getenv("API_BASE_URL", "http://localhost:8000")
-
-st.set_page_config(
-    page_title="IoT Agricultural Analytics Platform",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # Custom CSS
 st.markdown(
