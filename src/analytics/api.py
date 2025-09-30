@@ -6,7 +6,7 @@ Exposes the analytical tool as a REST API.
 
 import os
 import sys
-from datetime import datetime, timedelta
+from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
 import logging
 
@@ -272,6 +272,32 @@ async def get_sensors():
 
     except Exception as e:
         logger.error(f"Error getting sensors: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.get("/sensors/data")
+async def get_sensors_data(limit: int = 1000):
+    """Get raw sensor data for dashboard visualization."""
+    try:
+        sensor_data = load_sensor_data(limit=limit)
+
+        if sensor_data.empty:
+            return []
+
+        # Convert to list of dictionaries for JSON response
+        # Rename columns to match dashboard expectations
+        sensor_data_renamed = sensor_data.rename(
+            columns={
+                "event_time": "timestamp",
+                "temperature_c": "temperature",
+                "humidity_pct": "humidity",
+            }
+        )
+
+        return sensor_data_renamed.to_dict("records")
+
+    except Exception as e:
+        logger.error(f"Error getting sensor data: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
 
