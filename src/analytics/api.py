@@ -51,7 +51,15 @@ def adjust_timestamps_to_current(
 
     # Calculate offset to make the most recent timestamp "now"
     most_recent = df_copy[timestamp_col].max()
-    current_time = datetime.now()
+
+    # Handle timezone awareness
+    if most_recent.tz is not None:
+        # Database timestamp is timezone-aware, make current_time timezone-aware too
+        current_time = datetime.now(most_recent.tz)
+    else:
+        # Database timestamp is timezone-naive, use naive current time
+        current_time = datetime.now()
+
     time_offset = current_time - most_recent
 
     # Apply offset to all timestamps
