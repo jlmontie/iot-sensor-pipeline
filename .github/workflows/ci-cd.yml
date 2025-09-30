@@ -64,6 +64,14 @@ jobs:
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.GCP_SA_KEY }}
+          
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+        
+      - name: Verify GCP Authentication
+        run: |
+          gcloud auth list
+          gcloud config list project
 
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v2
