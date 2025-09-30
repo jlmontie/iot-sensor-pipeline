@@ -1,10 +1,10 @@
 # IoT Agricultural Analytics Platform
 
-A production-ready analytical service that predicts optimal watering schedules for agricultural IoT sensors using machine learning.
+A production-ready analytical service that predicts optimal watering schedules for agricultural IoT sensors using machine learning. Features full CI/CD pipeline with automated testing, linting, and cloud deployment.
 
 ## Overview
 
-This project demonstrates the deployment of a custom analytical tool as a REST API service. The system processes real-time IoT sensor data to predict when plants need watering, preventing crop stress and optimizing water usage.
+This project demonstrates the deployment of a custom analytical tool as a REST API service with enterprise-grade CI/CD automation. The system processes real-time IoT sensor data to predict when plants need watering, preventing crop stress and optimizing water usage.
 
 ## Architecture
 
@@ -38,11 +38,25 @@ graph LR
 
 ## Key Features
 
+### **Analytics & ML**
 - **Predictive Analytics**: Forecasts watering needs up to 10 days in advance
 - **Real-time API**: Sub-100ms response times for prediction requests
 - **Interactive Dashboard**: Live sensor monitoring with auto-refresh
 - **API Documentation**: Auto-generated OpenAPI/Swagger docs
-- **Multi-environment**: Supports both local development and cloud deployment
+
+### **DevOps & Deployment**
+- **CI/CD Pipeline**: GitHub Actions with automated testing and deployment
+- **Infrastructure as Code**: Terraform for reproducible cloud infrastructure
+- **Multi-environment**: Seamless local development and cloud production
+- **Container Orchestration**: Docker + Cloud Run for scalable deployment
+- **Remote State Management**: Terraform state synchronization across environments
+
+### **CI/CD Pipeline Features**
+- **Automated Testing**: pytest with 4 comprehensive test suites
+- **Code Quality**: flake8 linting + black formatting 
+- **Infrastructure as Code**: Terraform deployment to Google Cloud
+- **Zero-Downtime Deployment**: Automated container builds and Cloud Run updates
+- **Multi-Environment**: Consistent deployment across local and cloud environments
 
 ## Quick Start
 
@@ -217,7 +231,29 @@ CREATE TABLE raw_sensor_readings (
 
 ## Deployment
 
-The system supports both local development and cloud deployment:
+### **Automated CI/CD Pipeline**
+
+The project features a complete GitHub Actions workflow that automatically:
+
+1. **Code Quality Checks**
+   - Runs `flake8` linting for code standards
+   - Applies `black` formatting for consistent style
+   - Executes `pytest` test suite (4 comprehensive tests)
+
+2. **Infrastructure Deployment**
+   - Authenticates with Google Cloud using service account
+   - Builds and pushes Docker images to Artifact Registry
+   - Deploys infrastructure using Terraform
+   - Updates Cloud Run services with new container images
+
+3. **Zero-Downtime Updates**
+   - Automated container builds for API and Dashboard
+   - Rolling updates to Cloud Run services
+   - Terraform state management with GCS backend
+
+**Trigger**: Push to `main` branch → Automatic deployment to production
+
+### **Local vs Cloud Deployment**
 
 - **Local**: PostgreSQL + FastAPI + Streamlit (via Docker Compose)
 - **Cloud**: BigQuery + Cloud Run + Cloud Functions (via Terraform)
@@ -250,8 +286,10 @@ The system supports both local development and cloud deployment:
 - **API Service**: Google Cloud Run (containerized FastAPI)
 - **Dashboard**: Google Cloud Run (containerized Streamlit)
 - **Data Processing**: Google Cloud Functions (serverless event processing)
-- **Infrastructure as Code**: Terraform
-- **CI/CD**: GitHub Actions
+- **Container Registry**: Google Artifact Registry
+- **Infrastructure as Code**: Terraform with GCS remote state
+- **CI/CD**: GitHub Actions with automated testing and deployment
+- **Authentication**: Google Cloud IAM with service accounts
 
 ### Data & Analytics
 - **Machine Learning**: scikit-learn regression models for time-series forecasting
