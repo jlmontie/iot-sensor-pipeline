@@ -1,5 +1,6 @@
-# Budget alert to control costs
+# Budget alert to control costs (optional - only created if billing_account is provided)
 resource "google_billing_budget" "iot_pipeline_budget" {
+  count           = var.billing_account != "" ? 1 : 0
   billing_account = var.billing_account
   display_name    = "IoT Pipeline Budget"
 
@@ -31,13 +32,14 @@ resource "google_billing_budget" "iot_pipeline_budget" {
 
   all_updates_rule {
     monitoring_notification_channels = [
-      google_monitoring_notification_channel.email.id
+      google_monitoring_notification_channel.email[0].id
     ]
   }
 }
 
-# Email notification channel for budget alerts
+# Email notification channel for budget alerts (optional)
 resource "google_monitoring_notification_channel" "email" {
+  count        = var.notification_email != "" ? 1 : 0
   display_name = "Email Notification"
   type         = "email"
 
@@ -46,16 +48,7 @@ resource "google_monitoring_notification_channel" "email" {
   }
 }
 
-# Variables
-variable "billing_account" {
-  description = "Billing account ID"
-  type        = string
-}
-
-variable "notification_email" {
-  description = "Email for budget notifications"
-  type        = string
-}
+# Budget variables are now defined in variables.tf
 
 
 

@@ -147,10 +147,10 @@ gcloud run services update iot-demo-dev-dashboard \
   --region $REGION \
   --platform managed
 
-echo "Frontloading BigQuery with historical data..."
-echo "This populates BigQuery with 6 weeks of historical data (3 sensors) for immediate visualization."
+# echo "Frontloading BigQuery with historical data..."
+# echo "This populates BigQuery with 6 weeks of historical data (3 sensors) for immediate visualization."
 
-DASHBOARD_MODE=cloud GCP_PROJECT_ID=$GCP_PROJECT_ID python3 scripts/frontload-cloud-data.py
+# DASHBOARD_MODE=cloud GCP_PROJECT_ID=$GCP_PROJECT_ID python3 scripts/frontload-cloud-data.py
 echo ""
 echo "DEPLOYMENT COMPLETE!"
 echo "===================="

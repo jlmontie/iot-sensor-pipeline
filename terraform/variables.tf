@@ -30,3 +30,16 @@ variable "region" {
   type        = string
   default     = "us-central1"
 }
+
+# Budget and billing variables
+variable "billing_account" {
+  description = "Billing account ID for budget alerts"
+  type        = string
+  default     = ""
+}
+
+variable "notification_email" {
+  description = "Email for budget notifications"
+  type        = string
+  default     = ""
+}
