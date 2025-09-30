@@ -32,7 +32,7 @@ jobs:
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install flake8 black pytest
+          pip install flake8 black pytest httpx
           pip install -r src/requirements.txt
           pip install -r cloud/functions/requirements.txt
 
