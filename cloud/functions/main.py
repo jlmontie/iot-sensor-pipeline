@@ -62,8 +62,12 @@ def process_sensor_data(cloud_event):
             {
                 "sensor_id": sensor_data.get("sensor_id"),
                 "event_time": sensor_data.get("timestamp"),
-                "temperature_c": sensor_data.get("temperature_c", sensor_data.get("temperature")),
-                "humidity_pct": sensor_data.get("humidity_pct", sensor_data.get("humidity")),
+                "temperature_c": sensor_data.get(
+                    "temperature_c", sensor_data.get("temperature")
+                ),
+                "humidity_pct": sensor_data.get(
+                    "humidity_pct", sensor_data.get("humidity")
+                ),
                 "soil_moisture": sensor_data.get("soil_moisture"),
             }
         ]
