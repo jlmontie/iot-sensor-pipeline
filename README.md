@@ -2,6 +2,10 @@
 
 A production-ready analytical service that predicts optimal watering schedules for agricultural IoT sensors using machine learning. Features full CI/CD pipeline with automated testing, linting, and cloud deployment.
 
+**Live Demo**  
+- [Dashboard](https://iot-demo-dev-dashboard-76c3tvdyfq-uc.a.run.app)  
+- [API Docs](https://iot-demo-dev-api-76c3tvdyfq-uc.a.run.app/docs)
+
 ## Overview
 
 This project demonstrates the deployment of a custom analytical tool as a REST API service with enterprise-grade CI/CD automation. The system processes real-time IoT sensor data to predict when plants need watering, preventing crop stress and optimizing water usage.
@@ -40,6 +44,7 @@ graph LR
 
 ### **Analytics & ML**
 - **Predictive Analytics**: Forecasts watering needs up to 10 days in advance
+- **Open API Endpoint**: Accept arbitrary sensor data for external integration
 - **Real-time API**: Sub-100ms response times for prediction requests
 - **Interactive Dashboard**: Live sensor monitoring with auto-refresh
 - **API Documentation**: Auto-generated OpenAPI/Swagger docs
@@ -57,6 +62,33 @@ graph LR
 - **Infrastructure as Code**: Terraform deployment to Google Cloud
 - **Zero-Downtime Deployment**: Automated container builds and Cloud Run updates
 - **Multi-Environment**: Consistent deployment across local and cloud environments
+
+## Screenshots
+
+### Dashboard (Streamlit)
+![Dashboard Screenshot](docs/images/dashboard.png)
+
+### API Docs (FastAPI)
+![API Docs](docs/images/api-docs.png)
+
+## Example API Usage
+Test the open prediction endpoint with your own data.  
+
+```bash
+curl -X POST "https://iot-demo-dev-api-76c3tvdyfq-uc.a.run.app/predict" \
+     -H "Content-Type: application/json" \
+     -d '{
+       "moisture_readings": [0.65, 0.58, 0.52, 0.45, 0.38],
+       "timestamps": [
+         "2025-09-25T10:00:00",
+         "2025-09-26T10:00:00", 
+         "2025-09-27T10:00:00",
+         "2025-09-28T10:00:00",
+         "2025-09-29T10:00:00"
+       ],
+       "sensor_id": "my-garden-sensor"
+     }'
+```
 
 ## Quick Start
 

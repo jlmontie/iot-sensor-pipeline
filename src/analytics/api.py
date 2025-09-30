@@ -44,7 +44,14 @@ app.add_middleware(
 )
 
 
-# Pydantic models for API responses
+# Pydantic models for API requests and responses
+class PredictionRequest(BaseModel):
+    """Request model for arbitrary sensor data prediction."""
+    moisture_readings: List[float]
+    timestamps: List[str]
+    sensor_id: Optional[str] = "external-sensor"
+
+
 class SensorStatus(BaseModel):
     sensor_id: str
     current_moisture: float
@@ -473,6 +480,119 @@ async def predict_all_sensors():
     except Exception as e:
         logger.error(f"Error in batch prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/predict", response_model=PredictionResult)
+async def predict_arbitrary_data(request: PredictionRequest):
+    """
+    Predict watering needs for arbitrary sensor data.
+    
+    This endpoint allows external users to submit their own moisture readings
+    and timestamps to get ML-powered watering predictions.
+    
+    Example request:
+    ```json
+    {
+        "moisture_readings": [0.65, 0.58, 0.52, 0.45, 0.38],
+        "timestamps": [
+            "2025-09-25T10:00:00",
+            "2025-09-26T10:00:00", 
+            "2025-09-27T10:00:00",
+            "2025-09-28T10:00:00",
+            "2025-09-29T10:00:00"
+        ],
+        "sensor_id": "my-custom-sensor"
+    }
+    ```
+    """
+    try:
+        # Validate input
+        if len(request.moisture_readings) != len(request.timestamps):
+            raise HTTPException(
+                status_code=400, 
+                detail="Number of moisture readings must match number of timestamps"
+            )
+        
+        if len(request.moisture_readings) < 5:
+            raise HTTPException(
+                status_code=400,
+                detail="At least 5 data points required for accurate prediction"
+            )
+        
+        # Validate moisture values
+        for moisture in request.moisture_readings:
+            if not (0.0 <= moisture <= 1.0):
+                raise HTTPException(
+                    status_code=400,
+                    detail="Moisture readings must be between 0.0 and 1.0"
+                )
+        
+        # Convert to DataFrame format expected by SmartWateringPredictor
+        try:
+            timestamps_parsed = [datetime.fromisoformat(ts.replace('Z', '+00:00')) for ts in request.timestamps]
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid timestamp format. Use ISO format (e.g., '2025-09-30T10:00:00'): {e}"
+            )
+        
+        # Create DataFrame
+        df = pd.DataFrame({
+            'timestamp': timestamps_parsed,
+            'moisture': request.moisture_readings,
+            'sensor_id': [request.sensor_id] * len(request.moisture_readings)
+        })
+        
+        # Sort by timestamp to ensure proper time series order
+        df = df.sort_values('timestamp').reset_index(drop=True)
+        
+        # Initialize smart forecaster
+        forecaster = SmartWateringPredictor()
+        
+        # Get comprehensive analysis
+        analysis = forecaster.analyze(df)
+        
+        # Extract results from analysis
+        current_moisture = df['moisture'].iloc[-1]  # Most recent reading
+        current_time = datetime.now()
+        
+        next_watering = analysis.get('next_watering_prediction', {})
+        predicted_date = next_watering.get('predicted_date')
+        critical_date = next_watering.get('critical_date')
+        
+        # Determine status based on current moisture
+        if current_moisture <= forecaster.critical_threshold:
+            status = "CRITICAL"
+        elif current_moisture <= forecaster.watering_threshold:
+            status = "WARNING"
+        else:
+            status = "OK"
+        
+        # Get health metrics and recommendations
+        health_metrics = analysis.get('health_metrics', {})
+        recommendations = analysis.get('recommendations', [])
+        confidence_score = analysis.get('model_confidence', 0.5)
+        
+        # Get predicted decay curve
+        predicted_decay_curve = analysis.get('moisture_decay_curve', {}).get('curve_points', [])
+        
+        return PredictionResult(
+            sensor_id=request.sensor_id,
+            current_moisture=current_moisture,
+            status=status,
+            predicted_watering_date=predicted_date,
+            critical_watering_date=critical_date,
+            confidence_score=confidence_score,
+            health_metrics=health_metrics,
+            recommendations=recommendations,
+            predicted_decay_curve=predicted_decay_curve,
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error predicting arbitrary data: {e}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
 if __name__ == "__main__":
