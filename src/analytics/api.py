@@ -10,7 +10,7 @@ from datetime import datetime
 from typing import List, Optional, Dict, Any, Tuple
 import logging
 
-from fastapi import FastAPI, HTTPException, Depends
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 import pandas as pd
@@ -31,7 +31,7 @@ app = FastAPI(
     description="Predictive watering analytics for IoT agricultural sensors",
     version="1.0.0",
     docs_url="/docs",
-    redoc_url="/redoc"
+    redoc_url="/redoc",
 )
 
 # CORS middleware for dashboard integration
@@ -43,13 +43,15 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
 # Pydantic models for API responses
 class SensorStatus(BaseModel):
     sensor_id: str
     current_moisture: float
     status: str
     last_reading: datetime
-    
+
+
 class PredictionResult(BaseModel):
     sensor_id: str
     current_moisture: float
@@ -65,6 +67,7 @@ class PredictionResult(BaseModel):
     health_metrics: Optional[Dict[str, Any]]
     recommendations: Optional[List[str]]
 
+
 class SensorInfo(BaseModel):
     sensor_id: str
     total_readings: int
@@ -73,21 +76,24 @@ class SensorInfo(BaseModel):
     moisture_range_min: float
     moisture_range_max: float
 
+
 class HealthCheck(BaseModel):
     status: str
     timestamp: datetime
     database_connected: bool
     sensors_available: int
 
+
 # Database connection
 def get_database():
     """Get database connection based on environment."""
     # Check if we're in cloud mode
     dashboard_mode = os.getenv("DASHBOARD_MODE", "local").lower()
-    
+
     if dashboard_mode == "cloud":
         # BigQuery connection (for cloud deployment)
         from google.cloud import bigquery
+
         project_id = os.getenv("GCP_PROJECT_ID")
         if not project_id:
             raise HTTPException(status_code=500, detail="GCP_PROJECT_ID not configured")
@@ -99,21 +105,22 @@ def get_database():
         DB_HOST = os.getenv("POSTGRES_HOST", "localhost")
         DB_PORT = os.getenv("POSTGRES_PORT", "5433")
         DB_NAME = os.getenv("POSTGRES_DB", "iot")
-        
+
         return create_engine(
             f"postgresql+psycopg2://{DB_USER}:{DB_PASS}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
         )
 
+
 def load_sensor_data(limit: int = 5000):
     """Load sensor data from database."""
     dashboard_mode = os.getenv("DASHBOARD_MODE", "local").lower()
-    
+
     if dashboard_mode == "cloud":
         # BigQuery query
         client = get_database()
         dataset = os.getenv("BQ_DATASET", "iot_pipeline")
         table = os.getenv("BQ_TABLE", "raw_sensor_readings")
-        
+
         query = f"""
         SELECT 
             sensor_id,
@@ -142,7 +149,9 @@ def load_sensor_data(limit: int = 5000):
         """
         return pd.read_sql(text(query), engine)
 
+
 # API Endpoints
+
 
 @app.get("/", response_model=Dict[str, str])
 async def root():
@@ -151,8 +160,9 @@ async def root():
         "service": "ForecastWater Analytics API",
         "version": "1.0.0",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
+
 
 @app.get("/health", response_model=HealthCheck)
 async def health_check():
@@ -161,13 +171,15 @@ async def health_check():
         # Test database connection
         sensor_data = load_sensor_data(limit=1)
         database_connected = not sensor_data.empty
-        sensors_available = len(sensor_data['sensor_id'].unique()) if database_connected else 0
-        
+        sensors_available = (
+            len(sensor_data["sensor_id"].unique()) if database_connected else 0
+        )
+
         return HealthCheck(
             status="healthy" if database_connected else "degraded",
             timestamp=datetime.now(),
             database_connected=database_connected,
-            sensors_available=sensors_available
+            sensors_available=sensors_available,
         )
     except Exception as e:
         logger.error(f"Health check failed: {e}")
@@ -175,271 +187,298 @@ async def health_check():
             status="unhealthy",
             timestamp=datetime.now(),
             database_connected=False,
-            sensors_available=0
+            sensors_available=0,
         )
+
 
 @app.get("/sensors", response_model=List[SensorInfo])
 async def get_sensors():
     """Get information about all available sensors."""
     try:
         sensor_data = load_sensor_data()
-        
+
         if sensor_data.empty:
             return []
-        
+
         sensors_info = []
-        for sensor_id in sensor_data['sensor_id'].unique():
-            sensor_df = sensor_data[sensor_data['sensor_id'] == sensor_id]
-            
-            sensors_info.append(SensorInfo(
-                sensor_id=sensor_id,
-                total_readings=len(sensor_df),
-                date_range_start=sensor_df['event_time'].min(),
-                date_range_end=sensor_df['event_time'].max(),
-                moisture_range_min=sensor_df['soil_moisture'].min(),
-                moisture_range_max=sensor_df['soil_moisture'].max()
-            ))
-        
+        for sensor_id in sensor_data["sensor_id"].unique():
+            sensor_df = sensor_data[sensor_data["sensor_id"] == sensor_id]
+
+            sensors_info.append(
+                SensorInfo(
+                    sensor_id=sensor_id,
+                    total_readings=len(sensor_df),
+                    date_range_start=sensor_df["event_time"].min(),
+                    date_range_end=sensor_df["event_time"].max(),
+                    moisture_range_min=sensor_df["soil_moisture"].min(),
+                    moisture_range_max=sensor_df["soil_moisture"].max(),
+                )
+            )
+
         return sensors_info
-        
+
     except Exception as e:
         logger.error(f"Error getting sensors: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/sensors/{sensor_id}/status", response_model=SensorStatus)
 async def get_sensor_status(sensor_id: str):
     """Get current status for a specific sensor."""
     try:
         sensor_data = load_sensor_data()
-        
+
         if sensor_data.empty:
             raise HTTPException(status_code=404, detail="No sensor data available")
-        
-        if sensor_id not in sensor_data['sensor_id'].values:
+
+        if sensor_id not in sensor_data["sensor_id"].values:
             raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found")
-        
+
         # Initialize forecaster and get analysis
         forecaster = SmartWateringPredictor()
-        
+
         # Prepare data for SmartWateringPredictor
-        sensor_subset = sensor_data[sensor_data['sensor_id'] == sensor_id].copy()
-        sensor_subset = sensor_subset.rename(columns={
-            'event_time': 'timestamp',
-            'soil_moisture': 'moisture'
-        })
-        
+        sensor_subset = sensor_data[sensor_data["sensor_id"] == sensor_id].copy()
+        sensor_subset = sensor_subset.rename(
+            columns={"event_time": "timestamp", "soil_moisture": "moisture"}
+        )
+
         if sensor_subset.empty:
-            raise HTTPException(status_code=404, detail=f"No data found for sensor {sensor_id}")
-        
+            raise HTTPException(
+                status_code=404, detail=f"No data found for sensor {sensor_id}"
+            )
+
         # Get analysis results
         analysis = forecaster.analyze(sensor_subset)
-        prediction = analysis['next_watering_prediction']
-        health = analysis['plant_health_metrics']
-        
+        prediction = analysis["next_watering_prediction"]
+        health = analysis["plant_health_metrics"]
+
         # Extract status from prediction urgency
         urgency_to_status = {
-            'CRITICAL': 'CRITICAL',
-            'HIGH': 'WARNING', 
-            'MEDIUM': 'OK',
-            'LOW': 'OK',
-            'NONE': 'OK'
+            "CRITICAL": "CRITICAL",
+            "HIGH": "WARNING",
+            "MEDIUM": "OK",
+            "LOW": "OK",
+            "NONE": "OK",
         }
-        status = urgency_to_status.get(prediction['urgency'], 'OK')
-        
+        status = urgency_to_status.get(prediction["urgency"], "OK")
+
         return SensorStatus(
             sensor_id=sensor_id,
-            current_moisture=health['current_moisture'],
+            current_moisture=health["current_moisture"],
             status=status,
-            last_reading=sensor_subset['timestamp'].iloc[0]  # Most recent due to DESC order
+            last_reading=sensor_subset["timestamp"].iloc[
+                0
+            ],  # Most recent due to DESC order
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error getting sensor status: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/sensors/{sensor_id}/predict", response_model=PredictionResult)
 async def predict_watering(sensor_id: str):
     """Get watering predictions for a specific sensor."""
     try:
         sensor_data = load_sensor_data()
-        
+
         if sensor_data.empty:
             raise HTTPException(status_code=404, detail="No sensor data available")
-        
-        if sensor_id not in sensor_data['sensor_id'].values:
+
+        if sensor_id not in sensor_data["sensor_id"].values:
             raise HTTPException(status_code=404, detail=f"Sensor {sensor_id} not found")
-        
+
         # Initialize smart forecaster
         forecaster = SmartWateringPredictor()
-        
+
         # Prepare data for SmartWateringPredictor
-        sensor_subset = sensor_data[sensor_data['sensor_id'] == sensor_id].copy()
-        sensor_subset = sensor_subset.rename(columns={
-            'event_time': 'timestamp',
-            'soil_moisture': 'moisture'
-        })
-        
+        sensor_subset = sensor_data[sensor_data["sensor_id"] == sensor_id].copy()
+        sensor_subset = sensor_subset.rename(
+            columns={"event_time": "timestamp", "soil_moisture": "moisture"}
+        )
+
         # Get comprehensive analysis - this does all the work!
         analysis = forecaster.analyze(sensor_subset)
-        
+
         # Extract results from analysis
-        prediction = analysis['next_watering_prediction']
-        health = analysis['plant_health_metrics']
-        recommendations = analysis['recommendations']
-        
+        prediction = analysis["next_watering_prediction"]
+        health = analysis["plant_health_metrics"]
+        recommendations = analysis["recommendations"]
+
         # Map urgency to API status format
         urgency_to_status = {
-            'CRITICAL': 'CRITICAL',
-            'HIGH': 'WARNING',
-            'MEDIUM': 'OK', 
-            'LOW': 'OK',
-            'NONE': 'OK'
+            "CRITICAL": "CRITICAL",
+            "HIGH": "WARNING",
+            "MEDIUM": "OK",
+            "LOW": "OK",
+            "NONE": "OK",
         }
-        status = urgency_to_status.get(prediction['urgency'], 'OK')
-        
+        status = urgency_to_status.get(prediction["urgency"], "OK")
+
         # Extract prediction dates
-        predicted_date = prediction.get('timestamp')
+        predicted_date = prediction.get("timestamp")
         critical_date = None
-        
+
         # For critical/high urgency, set critical date appropriately
-        if prediction['urgency'] == 'CRITICAL':
+        if prediction["urgency"] == "CRITICAL":
             critical_date = predicted_date  # Same as predicted for critical
-        elif prediction['urgency'] == 'HIGH':
+        elif prediction["urgency"] == "HIGH":
             # Critical date is soon after predicted date
             from datetime import timedelta
-            critical_date = predicted_date + timedelta(hours=12) if predicted_date else None
-        
+
+            critical_date = (
+                predicted_date + timedelta(hours=12) if predicted_date else None
+            )
+
         # Calculate drying rate from recent data for API compatibility
         recent_data = sensor_subset.tail(48)  # Last 48 hours
         drying_rate = 0.0
         if len(recent_data) >= 2:
-            time_span_hours = (recent_data['timestamp'].max() - recent_data['timestamp'].min()).total_seconds() / 3600
+            time_span_hours = (
+                recent_data["timestamp"].max() - recent_data["timestamp"].min()
+            ).total_seconds() / 3600
             if time_span_hours > 0:
-                moisture_change = recent_data['moisture'].iloc[0] - recent_data['moisture'].iloc[-1]
+                moisture_change = (
+                    recent_data["moisture"].iloc[0] - recent_data["moisture"].iloc[-1]
+                )
                 drying_rate = max(0.0, moisture_change / time_span_hours)
 
-        curve_data = analysis.get('moisture_decay_curve', []).get('curve_data', [])
-        predicted_decay_curve = [(item['timestamp'], item['predicted_moisture']) for item in curve_data]
+        curve_data = analysis.get("moisture_decay_curve", []).get("curve_data", [])
+        predicted_decay_curve = [
+            (item["timestamp"], item["predicted_moisture"]) for item in curve_data
+        ]
         return PredictionResult(
             sensor_id=sensor_id,
-            current_moisture=health['current_moisture'],
+            current_moisture=health["current_moisture"],
             status=status,
             predicted_watering_date=predicted_date,
             critical_watering_date=critical_date,
             drying_rate_per_hour=drying_rate,
-            model_accuracy=analysis['model_confidence'],
+            model_accuracy=analysis["model_confidence"],
             samples_used=len(sensor_subset),
             analysis_timestamp=datetime.now(),
-            confidence_score=prediction.get('confidence', analysis['model_confidence']),
+            confidence_score=prediction.get("confidence", analysis["model_confidence"]),
             predicted_decay_curve=predicted_decay_curve,
             health_metrics=health,
-            recommendations=recommendations
+            recommendations=recommendations,
         )
-        
+
     except HTTPException:
         raise
     except Exception as e:
         logger.error(f"Error predicting watering: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 @app.get("/sensors/predict/batch", response_model=List[PredictionResult])
 async def predict_all_sensors():
     """Get watering predictions for all sensors."""
     try:
         sensor_data = load_sensor_data()
-        
+
         if sensor_data.empty:
             raise HTTPException(status_code=404, detail="No sensor data available")
-        
+
         predictions = []
-        for sensor_id in sensor_data['sensor_id'].unique():
+        for sensor_id in sensor_data["sensor_id"].unique():
             try:
                 # Initialize smart forecaster
                 forecaster = SmartWateringPredictor()
-                
+
                 # Prepare data for SmartWateringPredictor
-                sensor_subset = sensor_data[sensor_data['sensor_id'] == sensor_id].copy()
-                sensor_subset = sensor_subset.rename(columns={
-                    'event_time': 'timestamp',
-                    'soil_moisture': 'moisture'
-                })
-                
+                sensor_subset = sensor_data[
+                    sensor_data["sensor_id"] == sensor_id
+                ].copy()
+                sensor_subset = sensor_subset.rename(
+                    columns={"event_time": "timestamp", "soil_moisture": "moisture"}
+                )
+
                 # Get comprehensive analysis
                 analysis = forecaster.analyze(sensor_subset)
-                
+
                 # Extract results from analysis
-                prediction = analysis['next_watering_prediction']
-                health = analysis['plant_health_metrics']
-                recommendations = analysis['recommendations']
-                
+                prediction = analysis["next_watering_prediction"]
+                health = analysis["plant_health_metrics"]
+                recommendations = analysis["recommendations"]
+
                 # Map urgency to API status format
                 urgency_to_status = {
-                    'CRITICAL': 'CRITICAL',
-                    'HIGH': 'WARNING',
-                    'MEDIUM': 'OK',
-                    'LOW': 'OK', 
-                    'NONE': 'OK'
+                    "CRITICAL": "CRITICAL",
+                    "HIGH": "WARNING",
+                    "MEDIUM": "OK",
+                    "LOW": "OK",
+                    "NONE": "OK",
                 }
-                status = urgency_to_status.get(prediction['urgency'], 'OK')
-                
+                status = urgency_to_status.get(prediction["urgency"], "OK")
+
                 # Extract prediction dates
-                predicted_date = prediction.get('timestamp')
+                predicted_date = prediction.get("timestamp")
                 critical_date = None
-                
+
                 # For critical/high urgency, set critical date appropriately
-                if prediction['urgency'] == 'CRITICAL':
+                if prediction["urgency"] == "CRITICAL":
                     critical_date = predicted_date
-                elif prediction['urgency'] == 'HIGH':
+                elif prediction["urgency"] == "HIGH":
                     from datetime import timedelta
-                    critical_date = predicted_date + timedelta(hours=12) if predicted_date else None
-                
+
+                    critical_date = (
+                        predicted_date + timedelta(hours=12) if predicted_date else None
+                    )
+
                 # Calculate drying rate for API compatibility
                 recent_data = sensor_subset.tail(48)
                 drying_rate = 0.0
                 if len(recent_data) >= 2:
-                    time_span_hours = (recent_data['timestamp'].max() - recent_data['timestamp'].min()).total_seconds() / 3600
+                    time_span_hours = (
+                        recent_data["timestamp"].max() - recent_data["timestamp"].min()
+                    ).total_seconds() / 3600
                     if time_span_hours > 0:
-                        moisture_change = recent_data['moisture'].iloc[0] - recent_data['moisture'].iloc[-1]
+                        moisture_change = (
+                            recent_data["moisture"].iloc[0]
+                            - recent_data["moisture"].iloc[-1]
+                        )
                         drying_rate = max(0.0, moisture_change / time_span_hours)
-                
-                predictions.append(PredictionResult(
-                    sensor_id=sensor_id,
-                    current_moisture=health['current_moisture'],
-                    status=status,
-                    predicted_watering_date=predicted_date,
-                    critical_watering_date=critical_date,
-                    drying_rate_per_hour=drying_rate,
-                    model_accuracy=analysis['model_confidence'],
-                    samples_used=len(sensor_subset),
-                    analysis_timestamp=datetime.now(),
-                    confidence_score=prediction.get('confidence', analysis['model_confidence']),
-                    predicted_decay_curve=prediction.get('moisture_decay_curve', []),
-                    health_metrics=health,
-                    recommendations=recommendations
-                ))
-                
+
+                predictions.append(
+                    PredictionResult(
+                        sensor_id=sensor_id,
+                        current_moisture=health["current_moisture"],
+                        status=status,
+                        predicted_watering_date=predicted_date,
+                        critical_watering_date=critical_date,
+                        drying_rate_per_hour=drying_rate,
+                        model_accuracy=analysis["model_confidence"],
+                        samples_used=len(sensor_subset),
+                        analysis_timestamp=datetime.now(),
+                        confidence_score=prediction.get(
+                            "confidence", analysis["model_confidence"]
+                        ),
+                        predicted_decay_curve=prediction.get(
+                            "moisture_decay_curve", []
+                        ),
+                        health_metrics=health,
+                        recommendations=recommendations,
+                    )
+                )
+
             except Exception as e:
                 logger.warning(f"Failed to predict for sensor {sensor_id}: {e}")
                 continue
-        
+
         return predictions
-        
+
     except Exception as e:
         logger.error(f"Error in batch prediction: {e}")
         raise HTTPException(status_code=500, detail=str(e))
 
+
 if __name__ == "__main__":
     import uvicorn
-    
+
     # Get port from environment (for Cloud Run compatibility)
     port = int(os.getenv("PORT", 8000))
-    
-    uvicorn.run(
-        "api:app",
-        host="0.0.0.0",
-        port=port,
-        reload=True,
-        log_level="info"
-    )
+
+    uvicorn.run("api:app", host="0.0.0.0", port=port, reload=True, log_level="info")
