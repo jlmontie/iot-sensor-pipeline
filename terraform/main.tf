@@ -3,6 +3,13 @@
 
 terraform {
   required_version = ">= 1.0"
+  
+  # Remote state backend for consistency between local and CI/CD
+  backend "gcs" {
+    bucket = "iot-demo-dev-terraform-state"
+    prefix = "terraform/state"
+  }
+  
   required_providers {
     google = {
       source  = "hashicorp/google"
