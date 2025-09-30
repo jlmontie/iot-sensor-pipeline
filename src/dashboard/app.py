@@ -143,16 +143,16 @@ def main():
     # API Health Check
     health_data = call_api("/health")
     if health_data:
-        status = health_data.get("status", "unknown")
-        if status == "healthy":
-            st.sidebar.success(f"API Status: {status.upper()}")
+        api_status = health_data.get("status", "unknown")
+        if api_status == "healthy":
+            st.sidebar.success(f"API Status: {api_status.upper()}")
         else:
-            st.sidebar.warning(f"API Status: {status.upper()}")
-
-        st.sidebar.metric(
-            "Database Connected", "" if health_data.get("database_connected") else ""
-        )
-        st.sidebar.metric("Sensors Available", health_data.get("sensors_available", 0))
+            st.sidebar.warning(f"API Status: {api_status.upper()}")
+        db_status = health_data.get("database_connected", False)
+        if db_status:
+            st.sidebar.success("Database Status: Connected")
+        else:
+            st.sidebar.warning("Database Status: Disconnected")
     else:
         st.sidebar.error(" API Unavailable")
 
