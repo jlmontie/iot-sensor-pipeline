@@ -107,3 +107,34 @@ jobs:
 
       - name: Terraform Apply
         run: terraform -chdir=terraform apply -auto-approve tfplan
+
+      - name: Build and Deploy Container Images
+        run: |
+          # Set variables
+          PROJECT_ID="${{ secrets.GCP_PROJECT_ID }}"
+          REPOSITORY="iot-demo-dev-repo"
+          REGION="us-central1"
+          
+          # Configure Docker for Artifact Registry
+          gcloud auth configure-docker ${REGION}-docker.pkg.dev
+          
+          # Build and push API image
+          echo "Building API container..."
+          docker build --platform linux/amd64 -f Dockerfile.api -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest .
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest
+          
+          # Build and push Dashboard image  
+          echo "Building Dashboard container..."
+          docker build --platform linux/amd64 -f Dockerfile.dashboard -t ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest .
+          docker push ${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest
+          
+          # Update Cloud Run services
+          echo "Updating API service..."
+          gcloud run services update iot-demo-dev-api \
+            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/api:latest \
+            --region=${REGION}
+            
+          echo "Updating Dashboard service..."
+          gcloud run services update iot-demo-dev-dashboard \
+            --image=${REGION}-docker.pkg.dev/${PROJECT_ID}/${REPOSITORY}/dashboard:latest \
+            --region=${REGION}
